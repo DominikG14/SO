@@ -8,6 +8,7 @@
 #include "pools.h"
 #include "low/key.h"
 #include "low/ps.h"
+#include "low/signal.h"
 #include "key_ids.h"
 #include "low/shared_mem.h"
 
@@ -22,6 +23,7 @@ int POOL_CLOSE;
 int SPAWN_CLIENT_PERC = 47;
 
 int sim_time;
+bool cash_open = false;
 
 
 // Converts HH:MM time format to minutes
@@ -98,17 +100,53 @@ void spawn_client(){
 }
 
 
+void open_cash(int pool_num){
+    char str_pool_num[1];
+    snprintf(str_pool_num, 1, "%d", pool_num);
+
+    execl(CASHIER_PS_NAME, CASHIER_PS_RUN,  str_pool_num, NULL);
+    perror(__func__);
+    exit(EXIT_FAILURE);
+}
+
+
 int main() {
     setup();
 
     pid_t pid;
     pid_t ps[1000];
+    pid_t cash_ps[3];
     size_t created_ps = 0;
 
 
     while(sim_time <= SIM_TIME_END){
         disp_time();
 
+        // Cashiers
+        if(!cash_open && sim_time >= POOL_OPEN){
+            cash_open = true;
+
+            for(int pool_num = 0; pool_num < POOLS__NUM; pool_num++){
+                switch(pid = fork()){
+                    case FORK__FAIL:
+                        perror(__func__);
+                        exit(EXIT_FAILURE);
+
+                    case FORK__SUCCESS:
+                        cash_ps[pool_num] = pid;
+                        open_cash(pool_num);
+                }
+            }
+        }
+
+        if(cash_open && sim_time > POOL_CLOSE){
+            cash_open = false;
+            for(int pool_num = 0; pool_num < POOLS__NUM; pool_num++){
+                send_signal(cash_ps[pool_num], SIGUSR1);
+            }
+        }
+
+        // Clients
         if(sim_time < POOL_OPEN || sim_time > POOL_CLOSE){
             printf(" - Pool closed!");
         }
