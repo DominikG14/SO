@@ -4,11 +4,11 @@ enum FORK__STATE {
 };
 
 
-const char* CLIENT_PS_NAME = "client";
-const char* CLIENT_PS_RUN  = "./client";
+const char* CLIENT_PS_NAME = "build/client";
+const char* CLIENT_PS_RUN  = "./build/client";
 
-const char* CASHIER_PS_NAME = "ratownik"; 
-const char* CASHIER_PS_RUN  = "./ratownik";
+const char* CASHIER_PS_NAME = "build/cashier"; 
+const char* CASHIER_PS_RUN  = "./build/cashier";
 
-const char* LIFEGUARD_PS_NAME = "ratownik"; 
-const char* LIFEGUARD_PS_RUN  = "./ratownik";
+const char* LIFEGUARD_PS_NAME = "build/lifeguard"; 
+const char* LIFEGUARD_PS_RUN  = "./build/lifeguard";

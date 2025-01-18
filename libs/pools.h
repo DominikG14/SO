@@ -10,23 +10,34 @@ enum POOLS {
 
 int POOL[POOLS__SIZE];
 
-
 const int OLIMPIC_POOL__MAX_SIZE = 10;
+const int LEISURE_POOL_MAX_SIZE  = 10;
+const int PADDLING_POOL_MAX_SIZE = 10;
+
+
+int POOL_SIZE[] = {
+    OLIMPIC_POOL__MAX_SIZE,
+    LEISURE_POOL_MAX_SIZE,
+    PADDLING_POOL_MAX_SIZE,
+};
+
 
 struct OLIMPIC_POOL__SHARED_MEM {
     int size;
 } typedef OlimpicPool;
 
 
-const int LEISURE_POOL_MAX_SIZE  = 10;
-
 struct LEISURE_POOL__SHARED_MEM {
     int size;
 } typedef LeisurePool;
 
 
-const int PADDLING_POOL_MAX_SIZE = 10;
-
 struct PADDLING_POOL__SHARED_MEM {
     int size;
 } typedef PaddlingPool;
+
+
+// Global pools objects
+OlimpicPool  olimpic_pool;
+LeisurePool  leisure_pool;
+PaddlingPool paddling_pool;

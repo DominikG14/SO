@@ -1,24 +1,18 @@
 #include <stdio.h>
 #include <stdlib.h>
-#include <time.h>
 #include <stdbool.h>
+#include <wait.h>
+#include <unistd.h>
 
+#include "random.h"
 #include "pools.h"
 #include "low/key.h"
+#include "low/ps.h"
 #include "key_ids.h"
 #include "low/shared_mem.h"
 
 
-OlimpicPool  olimpic_pool;
-LeisurePool  leisure_pool;
-PaddlingPool paddling_pool;
-
-
 void setup(){
-    // Set random generator
-    srand(time(0));
-
-
     // Init shared mem
     key_t key;
 
@@ -45,25 +39,70 @@ void clean_up(){
 }
 
 
-int rand_int(int min, int max){
-    return min + rand() % (max - min + 1);
+int time_HHMM(int hour, int min){
+    return hour * 60 + min;
 }
 
+int SIM_TIME = 1; // 1 real second =  SIM_TIME minutes in simulation 
+int SIM_TIME_START;
+int SIM_TIME_END;
 
-struct Client {
-    int age;
-    bool swim_cap_on;
-    bool diaper_on;
-} typedef Client;
+int SPAWN_CLIENT_PERC = 47;
 
-
-int main() {
-    setup();
-
-    for(int i = 0; i < 100; i++){
-        printf("%d\n", rand_int(0, 100));
+bool rand_client(){
+    int spawn_client_perc = rand_int(0, 100);
+    if(spawn_client_perc <= SPAWN_CLIENT_PERC){
+        return true;
     }
 
-    clean_up();
+    return false;
+}
+
+int main() {
+    int SIM_TIME_START = time_HHMM(0, 0);
+    int SIM_TIME_END = time_HHMM(23, 59);
+    // setup();
+
+    // pid_t ps[100];
+
+    // for(int i = 0; i < 100; i++){
+    //     pid_t pid;
+
+    //     switch(pid = fork()){
+    //         case FORK__FAIL:
+    //             perror(__func__);
+    //             exit(EXIT_FAILURE);
+
+    //         case FORK__SUCCESS:
+    //             ps[i] = pid;
+    //             execl(CLIENT_PS_NAME, CLIENT_PS_RUN, NULL);
+    //             perror(__func__);
+    //             exit(EXIT_FAILURE);
+    //     }
+    // }
+
+
+    // for(int i = 0; i < 100; i++){
+    //     wait(&(ps[i]));
+    // }
+
+    int sim_time = SIM_TIME_START;
+
+    while(sim_time != SIM_TIME_END + 1){
+        printf("%d", sim_time);
+        sim_time += SIM_TIME;
+
+        if(rand_client()){
+            printf(" - Client spawned!");
+        }
+
+        printf("\n");
+        sleep(1);
+    }
+
+
+    printf("END\n");
+
+    // clean_up();
     return 0;
 }

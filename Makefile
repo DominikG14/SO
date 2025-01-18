@@ -4,19 +4,24 @@ CFLAGS = -I libs
 SRCDIR = src
 BUILDDIR = build
 
-SRC = $(SRCDIR)/main.c
-EXEC = $(BUILDDIR)/main
+SRC_MAIN  = $(SRCDIR)/main.c
+EXEC_MAIN = $(BUILDDIR)/main
+
+SRC_CLIENT  = $(SRCDIR)/client.c
+EXEC_CLIENT = $(BUILDDIR)/client
 
 
-all: $(EXEC)
+all: $(EXEC_MAIN)
 
-$(EXEC): $(SRC)
-	mkdir -p $(BUILDDIR)
-	$(CC) $(CFLAGS) $(SRC) -o $(EXEC)
+$(EXEC_MAIN): $(SRC_MAIN)
+	rm -rf $(BUILDDIR)
+	mkdir $(BUILDDIR)
+	$(CC) $(CFLAGS) $(SRC_MAIN) -o $(EXEC_MAIN)
+	$(CC) $(CFLAGS) $(SRC_CLIENT) -o $(EXEC_CLIENT)
 
 
 clean:
 	rm -rf $(BUILDDIR)
 
-run: $(EXEC)
-	./$(EXEC)
+run: $(EXEC_MAIN)
+	./$(EXEC_MAIN)
