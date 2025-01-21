@@ -5,6 +5,11 @@
 #include <signal.h>
 
 
+enum SIG__ABBR {
+    SIG__CLOSE_POOL = SIGUSR1,
+};
+
+
 void send_signal(pid_t pid, int signum){
     kill(pid, signum);
 }

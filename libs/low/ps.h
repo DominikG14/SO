@@ -4,11 +4,11 @@ enum FORK__STATE {
 };
 
 
-const char* CLIENT_PS_NAME = "build/client";
-const char* CLIENT_PS_RUN  = "./build/client";
+const char* PS__CLIENT_PATH = "build/client";
+const char* PS__CLIENT_NAME  = "./build/client";
 
-const char* CASHIER_PS_NAME = "build/cashier"; 
-const char* CASHIER_PS_RUN  = "./build/cashier";
+const char* PS__CASHIER_PATH = "build/cashier"; 
+const char* PS__CASHIER_NAME  = "./build/cashier";
 
-const char* LIFEGUARD_PS_NAME = "build/lifeguard"; 
-const char* LIFEGUARD_PS_RUN  = "./build/lifeguard";
+const char* PS__LIFEGUARD_PATH = "build/lifeguard"; 
+const char* PS__LIFEGUARD_NAME  = "./build/lifeguard";

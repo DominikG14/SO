@@ -1,14 +1,14 @@
 #pragma once
 
 
-enum POOLS {
+enum POOL__TYPES {
     OLIMPIC,
     LEISURE,
     PADDLING,
-    POOLS__NUM,
+    POOL__NUM,
 };
 
-int POOL[POOLS__NUM];
+int POOL[POOL__NUM];
 
 const int OLIMPIC_POOL__MAX_SIZE = 10;
 const int LEISURE_POOL__MAX_SIZE  = 10;

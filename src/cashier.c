@@ -14,14 +14,14 @@ void close_cash(){
 
 int main(int argc, char* argv[]){
     int pool_num = atoi(argv[1]);
-    printf("%dcash opened for pool: %d\n", getpid(), pool_num);
+    printf("%d: Cash opened for pool: %d\n", getpid(), pool_num);
 
     handle_signal(SIGUSR1, close_cash);
     while(CASH_OPEN){
         // TODO: Add cash functionality here
     }
 
-    printf("%d: cash closed for pool: %d\n", getpid(), pool_num);
+    printf("%d: Cash closed for pool: %d\n", getpid(), pool_num);
 
     return 0;
 }

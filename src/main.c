@@ -14,17 +14,23 @@
 #include "low/shared_mem.h"
 
 
-int SIM_TIME = 7; // 1 real second = (SIM_TIME) minutes in simulation 
-int SIM_TIME_START;
-int SIM_TIME_END;
+pid_t PS__CLIENT_PIDS[1000];
+pid_t PS__CASHIER_PIDS[POOL__NUM];
+pid_t PS__LIFEGUARD_PIDS[POOL__NUM];
+size_t PS__CLIENT_RUNNING = 0;
 
-int POOL_OPEN;
-int POOL_CLOSE;
+
+int SIM_TIME__PER_SEC = 30; // 1 real second = (SIM_TIME__PER_SEC) minutes in simulation 
+int SIM_TIME__START;
+int SIM_TIME__END;
+
+int POOL_OPEN_TIME;
+int POOL_CLOSE_TIME;
 
 int SPAWN_CLIENT_PERC = 47;
 
-int sim_time;
-bool cash_open = false;
+int SIM_TIME__CURR;
+bool POOL__IS_OPEN = false;
 
 
 // Converts HH:MM time format to minutes
@@ -51,13 +57,13 @@ void setup(){
     POOL[PADDLING] = access_shared_mem(key, sizeof(paddling_pool), IPC_CREAT|0600);
 
     // Simulation time setup
-    SIM_TIME_START = time_HHMM(9, 20);
-    SIM_TIME_END = time_HHMM(13, 0);
+    SIM_TIME__START = time_HHMM(9, 50);
+    SIM_TIME__END = time_HHMM(13, 0);
 
-    POOL_OPEN = time_HHMM(10, 0);
-    POOL_CLOSE = time_HHMM(11, 20);
+    POOL_OPEN_TIME = time_HHMM(10, 0);
+    POOL_CLOSE_TIME = time_HHMM(12, 30);
 
-    sim_time = SIM_TIME_START;
+    SIM_TIME__CURR = SIM_TIME__START;
 }
 
 
@@ -79,8 +85,8 @@ bool rand_client(){
 
 
 void disp_time(){
-    int hour = sim_time / 60;
-    int min = sim_time % 60;
+    int hour = SIM_TIME__CURR / 60;
+    int min = SIM_TIME__CURR % 60;
 
     if(hour < 10){
         printf("0");
@@ -95,7 +101,7 @@ void disp_time(){
 
 
 void spawn_client(){
-    execl(CLIENT_PS_NAME, CLIENT_PS_RUN, NULL);
+    execl(PS__CLIENT_PATH, PS__CLIENT_NAME, NULL);
     perror(__func__);
     exit(EXIT_FAILURE);
 }
@@ -105,9 +111,80 @@ void open_cash(int pool_num){
     char str_pool_num[2];
     snprintf(str_pool_num, 2, "%d", pool_num);
 
-    execl(CASHIER_PS_NAME, CASHIER_PS_RUN, str_pool_num, NULL);
+    execl(PS__CASHIER_PATH, PS__CASHIER_NAME, str_pool_num, NULL);
     perror(__func__);
     exit(EXIT_FAILURE);
+}
+
+
+void set_lifeguard(int pool_num){
+    char str_pool_num[2];
+    snprintf(str_pool_num, 2, "%d", pool_num);
+
+    execl(PS__LIFEGUARD_PATH, PS__LIFEGUARD_NAME, str_pool_num, NULL);
+    perror(__func__);
+    exit(EXIT_FAILURE);
+}
+
+
+void open_all_cashes(){
+    pid_t pid;
+
+    for(int pool_num = 0; pool_num < POOL__NUM; pool_num++){
+        switch(pid = fork()){
+            case FORK__FAIL:
+                perror(__func__);
+                exit(EXIT_FAILURE);
+
+            case FORK__SUCCESS:
+                open_cash(pool_num);
+            
+            default:
+                PS__CASHIER_PIDS[pool_num] = pid;
+        }
+    }
+}
+
+
+void close_all_cashes(){
+    for(int pool_num = 0; pool_num < POOL__NUM; pool_num++){
+        send_signal(PS__CASHIER_PIDS[pool_num], SIG__CLOSE_POOL);
+        waitpid(PS__CASHIER_PIDS[pool_num], NULL, 0);
+    }
+}
+
+
+void set_all_lifeguards(){
+    pid_t pid;
+
+    for(int pool_num = 0; pool_num < POOL__NUM; pool_num++){
+        switch(pid = fork()){
+            case FORK__FAIL:
+                perror(__func__);
+                exit(EXIT_FAILURE);
+
+            case FORK__SUCCESS:
+                set_lifeguard(pool_num);
+
+            default:
+                PS__LIFEGUARD_PIDS[pool_num] = pid;
+        }
+    }
+}
+
+
+void remove_all_lifeguards(){
+    for(int pool_num = 0; pool_num < POOL__NUM; pool_num++){
+        send_signal(PS__LIFEGUARD_PIDS[pool_num], SIG__CLOSE_POOL);
+        waitpid(PS__LIFEGUARD_PIDS[pool_num], NULL, 0);
+    }
+}
+
+
+void remove_all_clients(){
+    for(int i = 0; i < PS__CLIENT_RUNNING; i++) {
+        waitpid(PS__CLIENT_PIDS[i], NULL, 0);
+    }
 }
 
 
@@ -116,41 +193,31 @@ int main() {
     signal(SIGUSR1, SIG_IGN);
 
     pid_t pid;
-    pid_t ps[1000];
-    pid_t cash_ps[3];
-    size_t created_ps = 0;
 
 
-    while(sim_time <= SIM_TIME_END){
+
+    while(SIM_TIME__CURR <= SIM_TIME__END){
         disp_time();
 
-        // Cashiers
-        if(!cash_open && sim_time >= POOL_OPEN && sim_time <= POOL_CLOSE){
-            cash_open = true;
-
-            for(int pool_num = 0; pool_num < POOLS__NUM; pool_num++){
-                switch(pid = fork()){
-                    case FORK__FAIL:
-                        perror(__func__);
-                        exit(EXIT_FAILURE);
-
-                    case FORK__SUCCESS:
-                        cash_ps[pool_num] = pid;
-                        open_cash(pool_num);
-                }
-            }
+        // Open pool
+        if(!POOL__IS_OPEN && SIM_TIME__CURR >= POOL_OPEN_TIME && SIM_TIME__CURR <= POOL_CLOSE_TIME){
+            POOL__IS_OPEN = true;
+            open_all_cashes();
+            set_all_lifeguards();
+            sleep(1); // Wait for staff to setup
         }
 
-        if(cash_open && sim_time > POOL_CLOSE){
-            cash_open = false;
-            for(int pool_num = 0; pool_num < POOLS__NUM; pool_num++){
-                send_signal(cash_ps[pool_num], SIGUSR1);
-                wait(&(cash_ps[pool_num]));
-            }
+        // Close pool
+        if(POOL__IS_OPEN && SIM_TIME__CURR > POOL_CLOSE_TIME){
+            remove_all_clients();
+            close_all_cashes();
+            remove_all_lifeguards();
+            POOL__IS_OPEN = false;
         }
+
 
         // Clients
-        if(sim_time < POOL_OPEN || sim_time > POOL_CLOSE){
+        if(SIM_TIME__CURR < POOL_OPEN_TIME || SIM_TIME__CURR > POOL_CLOSE_TIME){
             printf(" - Pool closed!");
         }
 
@@ -161,27 +228,18 @@ int main() {
                     exit(EXIT_FAILURE);
 
                 case FORK__SUCCESS:
-                    ps[created_ps] = pid;
-                    created_ps++;
                     spawn_client();
+                
+                default:
+                    PS__CLIENT_PIDS[PS__CLIENT_RUNNING] = pid;
+                    PS__CLIENT_RUNNING++;
             }
         }
 
         printf("\n");
         sleep(1);
-        sim_time += SIM_TIME;
+        SIM_TIME__CURR += SIM_TIME__PER_SEC;
     }
-
-
-    // Wait for all clients to leave the pool complex
-    for(int i = 0; i < created_ps; i++){
-        wait(&(ps[i]));
-    }
-
-
-
-
-    printf("END\n");
 
     clean_up();
     return 0;
