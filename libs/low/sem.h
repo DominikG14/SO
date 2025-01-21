@@ -38,8 +38,6 @@ int access_sem(key_t key, int nsems, int flags){
         exit(EXIT_FAILURE);
     }
 
-    init_sem(semid, nsems);
-
     return semid;
 }
 
@@ -64,4 +62,15 @@ void operate_sem(int semid, int semnum, int sem_op) {
         perror(__func__);
         exit(EXIT_FAILURE);
     }
+}
+
+
+int get_sem_value(int semid, int semnum){
+    int value = semctl(semid, semnum, GETVAL);
+    if(value == SEM__FAILURE){
+        perror(__func__);
+        exit(EXIT_FAILURE);
+    }
+
+    return value;
 }

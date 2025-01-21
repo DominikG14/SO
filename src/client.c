@@ -7,6 +7,7 @@
 #include "low/sem.h"
 #include "low/files.h"
 #include "low/msg_q.h"
+#include "low/key.h"
 #include "keys_id.h"
 
 
@@ -33,10 +34,18 @@ int main(){
     printf("\n");
 
     handle_signal(SIG__CLOSE_POOL, leave_pool);
-    int cash_semid = get_id(CASHIER__TMP_FILE_SEMID);
-    int cash_msqid = get_id(CASHIER__TMP_FILE_MSQID);
 
-    operate_sem(cash_semid, 0, SEM__WAIT);
+    key_t key = get_key(CASHIER__KEY_ID);
+    int cash_semid = access_sem(key, 2, IPC_CREAT|0200);
+    int cash_msqid = access_msg_q(key, IPC_CREAT|0200);
+    operate_sem(cash_semid, SEM__CASHIER_PAYMENT, SEM__WAIT);
+    sleep(1);
+
+    if(get_sem_value(cash_semid, SEM__CASHIER_STATUS) == 1) {
+        printf("Cashier is closed. Exiting.\n");
+        exit(EXIT_SUCCESS);
+    }
+
     send_msg_q(cash_msqid, "TEST", 1);
 
     while(CLIENT__SWIM){

@@ -8,10 +8,8 @@
 #include "low/sem.h"
 #include "low/msg_q.h"
 
+#include "random.h"
 #include "keys_id.h"
-
-
-bool CASHIER__CASH_OPEN = true;
 
 
 int CASHIER__MSQID;
@@ -22,18 +20,31 @@ void open_cash(){
     key_t key = get_key(CASHIER__KEY_ID);
 
     CASHIER__MSQID = access_msg_q(key, IPC_CREAT|0600);
-    save_id(CASHIER__TMP_FILE_MSQID, CASHIER__MSQID);
 
-    CASHIER__SEMID = access_sem(key, 1, IPC_CREAT|0200);
-    save_id(CASHIER__TMP_FILE_SEMID, CASHIER__SEMID);
-    operate_sem(CASHIER__SEMID, 0, SEM__SIGNAL);
+    CASHIER__SEMID = access_sem(key, 2, IPC_CREAT|0600);
+    init_sem(CASHIER__SEMID, 2);
+    operate_sem(CASHIER__SEMID, SEM__CASHIER_PAYMENT, SEM__SIGNAL);
 
     printf("%d: Cash opened\n", getpid());
 }
 
 
 void close_cash(){
-    CASHIER__CASH_OPEN = false;
+    operate_sem(CASHIER__SEMID, SEM__CASHIER_STATUS, SEM__SIGNAL); // close cash
+
+    // Signaling Clients to leave
+    while(get_sem_value(CASHIER__SEMID, SEM__CASHIER_PAYMENT) < 0) {
+        operate_sem(CASHIER__SEMID, SEM__CASHIER_PAYMENT, SEM__SIGNAL);
+    }
+
+    // Discarding messages
+    MSG_Q__BUFFER msg;
+    while(msgrcv(CASHIER__MSQID, &msg, sizeof(msg.text), 0, IPC_NOWAIT) != -1) {
+        printf("Discarding message\n");
+    }
+
+    delete_sem(CASHIER__SEMID);
+    delete_msg_q(CASHIER__MSQID);
 }
 
 
@@ -41,17 +52,21 @@ int main(){
     open_cash();
 
     handle_signal(SIG__CLOSE_POOL, close_cash);
-    while(CASHIER__CASH_OPEN){
-        char* text = get_msg_q(CASHIER__MSQID, 1);
+    operate_sem(CASHIER__SEMID, SEM__CASHIER_PAYMENT, SEM__SIGNAL);
+
+    char* text;
+    int payment_time;
+    while(get_sem_value(CASHIER__SEMID, SEM__CASHIER_STATUS) == 0){
+        payment_time = 10;
+        sleep(payment_time);
+        text = get_msg_q(CASHIER__MSQID, 1);
         printf("\t%s\n", text);
         free(text), text = NULL;
 
-        operate_sem(CASHIER__SEMID, 0, SEM__SIGNAL);
+        operate_sem(CASHIER__SEMID, SEM__CASHIER_PAYMENT, SEM__SIGNAL);
     }
 
-    delete_sem(CASHIER__SEMID);
-    delete_msg_q(CASHIER__MSQID);
     printf("%d: Cash closed\n", getpid());
-
+    
     return 0;
 }

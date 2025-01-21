@@ -11,3 +11,9 @@ enum KEYS {
 
 char* CASHIER__TMP_FILE_MSQID = "./tmp/cash_msqid";
 char* CASHIER__TMP_FILE_SEMID = "./tmp/cash_semid";
+
+
+enum SEM__CASHIER_SEMS {
+    SEM__CASHIER_PAYMENT,
+    SEM__CASHIER_STATUS,
+};
