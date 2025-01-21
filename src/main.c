@@ -3,6 +3,7 @@
 #include <stdbool.h>
 #include <wait.h>
 #include <unistd.h>
+#include <string.h>
 
 #include "random.h"
 #include "pools.h"
@@ -51,7 +52,7 @@ void setup(){
 
     // Simulation time setup
     SIM_TIME_START = time_HHMM(9, 20);
-    SIM_TIME_END = time_HHMM(12, 0);
+    SIM_TIME_END = time_HHMM(13, 0);
 
     POOL_OPEN = time_HHMM(10, 0);
     POOL_CLOSE = time_HHMM(11, 20);
@@ -101,10 +102,10 @@ void spawn_client(){
 
 
 void open_cash(int pool_num){
-    char str_pool_num[1];
-    snprintf(str_pool_num, 1, "%d", pool_num);
+    char str_pool_num[2];
+    snprintf(str_pool_num, 2, "%d", pool_num);
 
-    execl(CASHIER_PS_NAME, CASHIER_PS_RUN,  str_pool_num, NULL);
+    execl(CASHIER_PS_NAME, CASHIER_PS_RUN, str_pool_num, NULL);
     perror(__func__);
     exit(EXIT_FAILURE);
 }
@@ -112,6 +113,7 @@ void open_cash(int pool_num){
 
 int main() {
     setup();
+    signal(SIGUSR1, SIG_IGN);
 
     pid_t pid;
     pid_t ps[1000];
@@ -123,7 +125,7 @@ int main() {
         disp_time();
 
         // Cashiers
-        if(!cash_open && sim_time >= POOL_OPEN){
+        if(!cash_open && sim_time >= POOL_OPEN && sim_time <= POOL_CLOSE){
             cash_open = true;
 
             for(int pool_num = 0; pool_num < POOLS__NUM; pool_num++){
@@ -143,6 +145,7 @@ int main() {
             cash_open = false;
             for(int pool_num = 0; pool_num < POOLS__NUM; pool_num++){
                 send_signal(cash_ps[pool_num], SIGUSR1);
+                wait(&(cash_ps[pool_num]));
             }
         }
 
@@ -174,6 +177,8 @@ int main() {
     for(int i = 0; i < created_ps; i++){
         wait(&(ps[i]));
     }
+
+
 
 
     printf("END\n");
