@@ -8,7 +8,7 @@ enum POOL__TYPES {
     POOL__NUM,
 };
 
-int POOL[POOL__NUM];
+int POOL__SHMID[POOL__NUM];
 
 const int OLIMPIC_POOL__MAX_SIZE = 10;
 const int LEISURE_POOL__MAX_SIZE  = 10;
@@ -20,6 +20,11 @@ int POOL_SIZE[] = {
     LEISURE_POOL__MAX_SIZE,
     PADDLING_POOL__MAX_SIZE,
 };
+
+
+char* OLIMPIC_POOL__TMP_FILE = "./tmp/op_shmid";
+char* LEISURE_POOL__TMP_FILE = "./tmp/lp_shmid";
+char* PADDLING_POOL__TMP_FILE = "./tmp/pp_shmid";
 
 
 struct OLIMPIC_POOL__SHARED_MEM {

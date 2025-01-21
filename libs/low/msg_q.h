@@ -1,13 +1,11 @@
 #pragma once
+#define MSG_Q__BUFFER_SIZE 4096
 
 #include <stdio.h>
 #include <sys/ipc.h>
 #include <sys/msg.h>
 #include <stdlib.h>
 #include <string.h>
-
-
-const size_t MSG_Q__BUFFER_SIZE = 4096;
 
 
 enum MSG_Q__STATES {
@@ -49,7 +47,6 @@ void send_msg_q(int msqid, const char* text, long type){
 
 char* get_msg_q(int msqid, long type){
     MSG_Q__BUFFER msg;
-    // msg.type = type;
 
     int status = msgrcv(msqid, &msg, sizeof(msg.text), type, 0);
     if(status == MSG_Q__FAILURE){
@@ -57,7 +54,9 @@ char* get_msg_q(int msqid, long type){
         exit(EXIT_FAILURE);
     }
 
-    return msg.text; // CHECK: (msg.text) ?
+    char* message =(char*) malloc(MSG_Q__BUFFER_SIZE);
+    strcpy(message, msg.text);
+    return message;
 }
 
 

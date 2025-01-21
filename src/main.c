@@ -4,28 +4,24 @@
 #include <wait.h>
 #include <unistd.h>
 #include <string.h>
+#include <sys/stat.h>
 
 #include "random.h"
-#include "pools.h"
+#include "pool.h"
 #include "low/key.h"
 #include "low/ps.h"
 #include "low/signal.h"
-#include "key_ids.h"
 #include "low/shared_mem.h"
-
-
-pid_t PS__CLIENT_PIDS[1000];
-pid_t PS__CASHIER_PIDS[POOL__NUM];
-pid_t PS__LIFEGUARD_PIDS[POOL__NUM];
-size_t PS__CLIENT_RUNNING = 0;
+#include "low/files.h"
+#include "keys_id.h"
 
 
 int SIM_TIME__PER_SEC = 30; // 1 real second = (SIM_TIME__PER_SEC) minutes in simulation 
 int SIM_TIME__START;
 int SIM_TIME__END;
 
-int POOL_OPEN_TIME;
-int POOL_CLOSE_TIME;
+int POOL__OPEN_TIME;
+int POOL__CLOSE_TIME;
 
 int SPAWN_CLIENT_PERC = 47;
 
@@ -40,37 +36,50 @@ int time_HHMM(int hour, int min){
 
 
 void setup(){
-    // Init shared mem
+    // tmp folder
+    mkdir("./tmp", 0700);
+
+    // Signal init
+    signal(SIGUSR1, SIG_IGN);
     key_t key;
+
+    // Init shared mem
+    char pool_shmid_str[FILE__SIZE];
 
     // Pools setup
     olimpic_pool.size = 0;
     key = get_key(OLIMPIC_POOL__KEY_ID);
-    POOL[OLIMPIC] = access_shared_mem(key, sizeof(olimpic_pool), IPC_CREAT|0600);
+    POOL__SHMID[OLIMPIC] = access_shared_mem(key, sizeof(olimpic_pool), IPC_CREAT|0600);
+    snprintf(pool_shmid_str, sizeof(pool_shmid_str), "%d", POOL__SHMID[OLIMPIC]);
+    write_file(OLIMPIC_POOL__TMP_FILE, pool_shmid_str);
 
     leisure_pool.size = 0;
     key = get_key(LEISURE_POOL__KEY_ID);
-    POOL[LEISURE] = access_shared_mem(key, sizeof(leisure_pool), IPC_CREAT|0600);
+    POOL__SHMID[LEISURE] = access_shared_mem(key, sizeof(leisure_pool), IPC_CREAT|0600);
+    snprintf(pool_shmid_str, sizeof(pool_shmid_str), "%d", POOL__SHMID[LEISURE]);
+    write_file(LEISURE_POOL__TMP_FILE, pool_shmid_str);
 
     paddling_pool.size = 0;
     key = get_key(PADDLING_POOL__KEY_ID);
-    POOL[PADDLING] = access_shared_mem(key, sizeof(paddling_pool), IPC_CREAT|0600);
+    POOL__SHMID[PADDLING] = access_shared_mem(key, sizeof(paddling_pool), IPC_CREAT|0600);
+    snprintf(pool_shmid_str, sizeof(pool_shmid_str), "%d", POOL__SHMID[PADDLING]);
+    write_file(PADDLING_POOL__TMP_FILE, pool_shmid_str);
 
     // Simulation time setup
     SIM_TIME__START = time_HHMM(9, 50);
     SIM_TIME__END = time_HHMM(13, 0);
 
-    POOL_OPEN_TIME = time_HHMM(10, 0);
-    POOL_CLOSE_TIME = time_HHMM(12, 30);
+    POOL__OPEN_TIME = time_HHMM(10, 0);
+    POOL__CLOSE_TIME = time_HHMM(12, 30);
 
     SIM_TIME__CURR = SIM_TIME__START;
 }
 
 
 void clean_up(){
-    delete_shared_mem(POOL[OLIMPIC]);
-    delete_shared_mem(POOL[LEISURE]);
-    delete_shared_mem(POOL[PADDLING]);
+    delete_shared_mem(POOL__SHMID[OLIMPIC]);
+    delete_shared_mem(POOL__SHMID[LEISURE]);
+    delete_shared_mem(POOL__SHMID[PADDLING]);
 }
 
 
@@ -107,13 +116,22 @@ void spawn_client(){
 }
 
 
-void open_cash(int pool_num){
-    char str_pool_num[2];
-    snprintf(str_pool_num, 2, "%d", pool_num);
+void open_cash(){
+    pid_t pid;
 
-    execl(PS__CASHIER_PATH, PS__CASHIER_NAME, str_pool_num, NULL);
-    perror(__func__);
-    exit(EXIT_FAILURE);
+    switch(pid = fork()){
+        case FORK__FAILURE:
+            perror(__func__);
+            exit(EXIT_FAILURE);
+
+        case FORK__SUCCESS:
+            execl(PS__CASHIER_PATH, PS__CASHIER_NAME, NULL);
+            perror(__func__);
+            exit(EXIT_FAILURE);
+
+        default:
+            PS__CASHIER_PID = pid;
+    }
 }
 
 
@@ -127,30 +145,9 @@ void set_lifeguard(int pool_num){
 }
 
 
-void open_all_cashes(){
-    pid_t pid;
-
-    for(int pool_num = 0; pool_num < POOL__NUM; pool_num++){
-        switch(pid = fork()){
-            case FORK__FAIL:
-                perror(__func__);
-                exit(EXIT_FAILURE);
-
-            case FORK__SUCCESS:
-                open_cash(pool_num);
-            
-            default:
-                PS__CASHIER_PIDS[pool_num] = pid;
-        }
-    }
-}
-
-
-void close_all_cashes(){
-    for(int pool_num = 0; pool_num < POOL__NUM; pool_num++){
-        send_signal(PS__CASHIER_PIDS[pool_num], SIG__CLOSE_POOL);
-        waitpid(PS__CASHIER_PIDS[pool_num], NULL, 0);
-    }
+void close_cash(){
+    send_signal(PS__CASHIER_PID, SIG__CLOSE_POOL);
+    waitpid(PS__CASHIER_PID, NULL, 0);
 }
 
 
@@ -159,7 +156,7 @@ void set_all_lifeguards(){
 
     for(int pool_num = 0; pool_num < POOL__NUM; pool_num++){
         switch(pid = fork()){
-            case FORK__FAIL:
+            case FORK__FAILURE:
                 perror(__func__);
                 exit(EXIT_FAILURE);
 
@@ -182,7 +179,8 @@ void remove_all_lifeguards(){
 
 
 void remove_all_clients(){
-    for(int i = 0; i < PS__CLIENT_RUNNING; i++) {
+    for(int i = 0; i < PS__CLIENT_RUNNING; i++){
+        send_signal(PS__CLIENT_PIDS[i], SIG__CLOSE_POOL);
         waitpid(PS__CLIENT_PIDS[i], NULL, 0);
     }
 }
@@ -190,40 +188,39 @@ void remove_all_clients(){
 
 int main() {
     setup();
-    signal(SIGUSR1, SIG_IGN);
 
     pid_t pid;
-
-
 
     while(SIM_TIME__CURR <= SIM_TIME__END){
         disp_time();
 
+
         // Open pool
-        if(!POOL__IS_OPEN && SIM_TIME__CURR >= POOL_OPEN_TIME && SIM_TIME__CURR <= POOL_CLOSE_TIME){
+        if(!POOL__IS_OPEN && SIM_TIME__CURR >= POOL__OPEN_TIME && SIM_TIME__CURR <= POOL__CLOSE_TIME){
             POOL__IS_OPEN = true;
-            open_all_cashes();
+            open_cash();
             set_all_lifeguards();
             sleep(1); // Wait for staff to setup
         }
 
+
         // Close pool
-        if(POOL__IS_OPEN && SIM_TIME__CURR > POOL_CLOSE_TIME){
+        if(POOL__IS_OPEN && SIM_TIME__CURR > POOL__CLOSE_TIME){
             remove_all_clients();
-            close_all_cashes();
+            close_cash();
             remove_all_lifeguards();
             POOL__IS_OPEN = false;
         }
 
 
         // Clients
-        if(SIM_TIME__CURR < POOL_OPEN_TIME || SIM_TIME__CURR > POOL_CLOSE_TIME){
+        if(SIM_TIME__CURR < POOL__OPEN_TIME || SIM_TIME__CURR > POOL__CLOSE_TIME){
             printf(" - Pool closed!");
         }
 
         else if(rand_client()){
             switch(pid = fork()){
-                case FORK__FAIL:
+                case FORK__FAILURE:
                     perror(__func__);
                     exit(EXIT_FAILURE);
 
@@ -236,6 +233,8 @@ int main() {
             }
         }
 
+
+        // Time
         printf("\n");
         sleep(1);
         SIM_TIME__CURR += SIM_TIME__PER_SEC;

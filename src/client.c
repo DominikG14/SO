@@ -2,41 +2,14 @@
 #include <stdbool.h>
 #include <unistd.h>
 
-#include "random.h"
+#include "client.h"
+#include "low/signal.h"
 
 
-struct Client {
-    int age;
-    bool swim_cap_on;
-} typedef Client;
+bool CLIENT__SWIM = true;
 
-
-void setup(){
-    srand(getpid());
-}
-
-
-const int HAS_CHILD_PERC = 29;
-const int SWIM_CAP_PREC = 30;
-
-
-bool rand_child(int client_age, int child_age){
-    int child_perc = rand_int(1, 100);
-    if(client_age - child_age >= 18 && child_perc <= HAS_CHILD_PERC){
-        return true;
-    }
-
-    return false;
-}
-
-
-bool rand_swim_cap(){
-    int swim_cap_perc = rand_int(1, 100);
-    if(swim_cap_perc <= SWIM_CAP_PREC){
-        return true;
-    }
-
-    return false;
+void leave_pool(){
+    CLIENT__SWIM = false;
 }
 
 
@@ -54,6 +27,12 @@ int main(){
         printf(", child: %d", child_age);
     }
     printf("\n");
+
+    handle_signal(SIG__CLOSE_POOL, leave_pool);
+    while(CLIENT__SWIM){
+        // TODO: Add Client functionality here
+    }
+    printf("%d: Client left the pool\n", getpid());
 
     return 0;
 }

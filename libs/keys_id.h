@@ -1,8 +1,9 @@
-#include <sys/types.h>
+#pragma once
 
 
-enum KEY_IDS {
+enum KEYS {
     OLIMPIC_POOL__KEY_ID,
     LEISURE_POOL__KEY_ID,
     PADDLING_POOL__KEY_ID,
+    CASHIER__KEY_ID,
 };
