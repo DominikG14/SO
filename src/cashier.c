@@ -12,8 +12,6 @@
 
 
 bool CASHIER__CASH_OPEN = true;
-char* CASHIER__TMP_FILE_MSQID = "./tmp/cash_msqid";
-char* CASHIER__TMP_FILE_SEMID = "./tmp/cash_semid";
 
 
 int CASHIER__MSQID;
@@ -36,10 +34,6 @@ void open_cash(){
 
 void close_cash(){
     CASHIER__CASH_OPEN = false;
-    delete_sem(CASHIER__SEMID);
-    delete_msg_q(CASHIER__MSQID);
-
-    printf("%d: Cash closed\n", getpid());
 }
 
 
@@ -48,8 +42,16 @@ int main(){
 
     handle_signal(SIG__CLOSE_POOL, close_cash);
     while(CASHIER__CASH_OPEN){
-        // TODO: Add cash functionality here
+        char* text = get_msg_q(CASHIER__MSQID, 1);
+        printf("\t%s\n", text);
+        free(text), text = NULL;
+
+        operate_sem(CASHIER__SEMID, 0, SEM__SIGNAL);
     }
+
+    delete_sem(CASHIER__SEMID);
+    delete_msg_q(CASHIER__MSQID);
+    printf("%d: Cash closed\n", getpid());
 
     return 0;
 }

@@ -43,27 +43,21 @@ void setup(){
     signal(SIGUSR1, SIG_IGN);
     key_t key;
 
-    // Init shared mem
-    char pool_shmid_str[FILE__SIZE];
-
     // Pools setup
     olimpic_pool.size = 0;
     key = get_key(OLIMPIC_POOL__KEY_ID);
     POOL__SHMID[OLIMPIC] = access_shared_mem(key, sizeof(olimpic_pool), IPC_CREAT|0600);
-    snprintf(pool_shmid_str, sizeof(pool_shmid_str), "%d", POOL__SHMID[OLIMPIC]);
-    write_file(OLIMPIC_POOL__TMP_FILE, pool_shmid_str);
+    save_id(OLIMPIC_POOL__TMP_FILE, POOL__SHMID[OLIMPIC]);
 
     leisure_pool.size = 0;
     key = get_key(LEISURE_POOL__KEY_ID);
     POOL__SHMID[LEISURE] = access_shared_mem(key, sizeof(leisure_pool), IPC_CREAT|0600);
-    snprintf(pool_shmid_str, sizeof(pool_shmid_str), "%d", POOL__SHMID[LEISURE]);
-    write_file(LEISURE_POOL__TMP_FILE, pool_shmid_str);
+    save_id(LEISURE_POOL__TMP_FILE, POOL__SHMID[LEISURE]);
 
     paddling_pool.size = 0;
     key = get_key(PADDLING_POOL__KEY_ID);
     POOL__SHMID[PADDLING] = access_shared_mem(key, sizeof(paddling_pool), IPC_CREAT|0600);
-    snprintf(pool_shmid_str, sizeof(pool_shmid_str), "%d", POOL__SHMID[PADDLING]);
-    write_file(PADDLING_POOL__TMP_FILE, pool_shmid_str);
+    save_id(PADDLING_POOL__TMP_FILE, POOL__SHMID[PADDLING]);
 
     // Simulation time setup
     SIM_TIME__START = time_HHMM(9, 50);

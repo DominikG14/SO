@@ -84,7 +84,7 @@ void write_file(char* filepath, char* text){
 
 
 size_t num_len(int num){
-    size_t len;
+    size_t len = 0;
     while(num > 0){
         len++;
         num /= 10;
@@ -95,11 +95,20 @@ size_t num_len(int num){
 
 
 void save_id(char* filepath, int id){
-    size_t size = num_len(id);
+    size_t size = num_len(id) + 1;
 
     char* id_str =(char*) malloc(size);
-    sprintf(id_str, "%d", id);
+    snprintf(id_str, size, "%d", id);
     write_file(filepath, id_str);
 
     free(id_str), id_str = NULL;
+}
+
+
+int get_id(char* filepath){
+    char* id_str = read_file(filepath, NULL);
+    int id = atoi(id_str);
+
+    free(id_str), id_str = NULL;
+    return id;
 }

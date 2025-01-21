@@ -4,6 +4,10 @@
 
 #include "client.h"
 #include "low/signal.h"
+#include "low/sem.h"
+#include "low/files.h"
+#include "low/msg_q.h"
+#include "keys_id.h"
 
 
 bool CLIENT__SWIM = true;
@@ -29,8 +33,14 @@ int main(){
     printf("\n");
 
     handle_signal(SIG__CLOSE_POOL, leave_pool);
+    int cash_semid = get_id(CASHIER__TMP_FILE_SEMID);
+    int cash_msqid = get_id(CASHIER__TMP_FILE_MSQID);
+
+    operate_sem(cash_semid, 0, SEM__WAIT);
+    send_msg_q(cash_msqid, "TEST", 1);
+
     while(CLIENT__SWIM){
-        // TODO: Add Client functionality here
+
     }
     printf("%d: Client left the pool\n", getpid());
 

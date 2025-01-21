@@ -20,6 +20,7 @@ EXEC_LIFEGUARD = $(BUILDDIR)/lifeguard
 all: $(EXEC_MAIN)
 
 $(EXEC_MAIN): $(SRC_MAIN)
+	clear
 	rm -rf $(BUILDDIR)
 	mkdir $(BUILDDIR)
 	$(CC) $(CFLAGS) $(SRC_MAIN) -o $(EXEC_MAIN)
