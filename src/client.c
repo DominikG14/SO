@@ -18,6 +18,30 @@ Client client;
 Child  child;
 
 
+void* spawn_child(){
+    while(child.WAIT_IN_CASH);
+    if(child.SWIM_IN_POOL) printf("%ld: Child of %d left the cash\n", child.tid, getpid());
+    else {
+        printf("%ld: Cash is closed, Child of %d left\n", child.tid, getpid());
+        pthread_exit(EXIT_SUCCESS);
+    }
+
+    while(child.SWIM_IN_POOL);
+    printf("%ld: Child of %d left the pool\n", child.tid, getpid());
+    pthread_exit(EXIT_SUCCESS);
+}
+
+
+void leave_pool(){
+    if(child.tid != -1){
+        child.SWIM_IN_POOL = false;
+        pthread_join(child.tid, NULL);
+    }
+    printf("%d: Client left the pool\n", getpid());
+    exit(EXIT_SUCCESS);
+}
+
+
 void spawn_client(){
     srand(getpid());
     
@@ -36,12 +60,11 @@ void spawn_client(){
         child.age = child_age;
         child.swim_cap_on = rand_swim_cap();
         child.WAIT_IN_CASH = true;
+        child.SWIM_IN_POOL = true;
 
         if(child.age <= 3){
             child.diaper_on = true;
         }
-
-        client.child = child;
 
         pthread_t child_tid = new_thread(spawn_child, NULL);
         child.tid = child_tid;
@@ -64,15 +87,6 @@ char* get_tmp(int id){
 }
 
 
-void leave_pool(){
-    if(client.child.tid != -1){
-
-    }
-    printf("%d: Client left the pool\n", getpid());
-    exit(EXIT_SUCCESS);
-}
-
-
 void wait_in_cash_queue(){
     key_t key = get_key(CASH_KEY_ID);
     int cash_semid = access_sem(key, 1, 0600);
@@ -82,6 +96,11 @@ void wait_in_cash_queue(){
         status = USoperate_sem(cash_semid, SEM_CASH_PAYMENT, SEM_WAIT);
 
         if(USget_sem_value(cash_semid, SEM_CASH_STATUS)){
+            if(child.tid != -1){
+                child.SWIM_IN_POOL = false;
+                child.WAIT_IN_CASH = false;
+                pthread_join(child.tid, NULL);
+            }
             printf("%d: Cash is closed, Client leaving\n", getpid());
             exit(EXIT_SUCCESS);
         }
@@ -118,7 +137,6 @@ void wait_in_cash_queue(){
             break;
         }
     }
-
     child.WAIT_IN_CASH = false;
 
     close(fd_fifo);
@@ -127,16 +145,6 @@ void wait_in_cash_queue(){
     free(pid_str), pid_str = NULL;
 
     printf("%d: Client left the cash\n", getpid());
-}
-
-
-void* spawn_child(){
-    while(child.WAIT_IN_CASH);
-    printf("%ld: Child of %d left the cash\n", child.tid, getpid());
-
-    while(child.SWIM_IN_POOL);
-    printf("%ld: Child of %d left the pool\n", child.tid, getpid());
-    pthread_exit(EXIT_SUCCESS);
 }
 
 

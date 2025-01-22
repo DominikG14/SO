@@ -23,8 +23,6 @@ struct Child {
 struct Client {
     int age;
     bool swim_cap_on;
-
-    Child child;
 } typedef Client;
 
 
