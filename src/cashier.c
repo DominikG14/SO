@@ -43,7 +43,7 @@ int accept_payment(){
     status = USget_msq(CASH_MSQID, 1, &client_pid_str);
 
     if(status != MSQ_FAILURE){
-        printf("%d: Cashier recived: %s\n", getpid(), client_pid_str);
+        // printf("%d: Cashier recived: %s\n", getpid(), client_pid_str);
         sleep(1);
         fd_fifo = open(client_pid_str, O_WRONLY);
 
@@ -55,7 +55,6 @@ int accept_payment(){
     write(fd_fifo, "OK", 3);
 
     free(client_pid_str), client_pid_str = NULL;
-    printf("\t status %d\n", status);
     return status;
 }
 

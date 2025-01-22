@@ -4,8 +4,18 @@
 
 
 
-const int CLIENT_HAS_CHILD_PERC = 29;
+const int CLIENT_HAS_CHILD_PERC = 100;
 const int CLIENT_SWIM_CAP_PREC = 30;
+
+// Expres how many (TIME_PER_SEC)
+const int CLIENT_MIN_SWIM_TIME = 3;
+const int CLIENT_MAX_SWIM_TIME = 10;
+
+const int CLIENT_MIN_AGE = 60;
+const int CLIENT_MAX_AGE = 70;
+
+const int CHILD_MIN_AGE = 1;
+const int CHILD_MAX_AGE = 5;
 
 
 struct Child {
@@ -43,4 +53,9 @@ bool rand_swim_cap(){
     }
 
     return false;
+}
+
+
+int rand_swim_time(){
+    return rand_int(CLIENT_MIN_SWIM_TIME, CLIENT_MAX_SWIM_TIME);
 }

@@ -16,6 +16,13 @@ enum SEM_CASH {
 };
 
 
+enum SEM_POOL {
+    SEM_POOL_ENTER,
+    SEM_POOL_STATUS,
+    SEM_POOL_NUM,
+};
+
+
 enum GENERAL_STATE {
     SUCCESS = 0,
     FAILURE = -1

@@ -16,6 +16,8 @@
         "tuple": "cpp",
         "type_traits": "cpp",
         "utility": "cpp",
-        "numbers": "c"
+        "numbers": "c",
+        "ps.h": "c",
+        "sem.h": "c"
     }
 }

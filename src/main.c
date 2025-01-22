@@ -10,8 +10,10 @@
 #include "pool.h"
 #include "keys_id.h"
 #include "utils.h"
+#include "color.h"
 
 #include "low/key.h"
+#include "low/sem.h"
 #include "low/ps.h"
 #include "low/signal.h"
 #include "low/shared_mem.h"
@@ -29,6 +31,17 @@ int SPAWN_CLIENT_PERC = 100;
 
 int TIME_CURR;
 bool POOL_IS_OPEN = false;
+
+
+void __create_pool_resources(int pool_num){
+    key_t key;
+    int semid;
+
+    key = get_key(pool_num);
+    access_shared_mem(key, POOL_SHARED_MEM_SIZE[pool_num], IPC_CREAT|0600);
+    semid = access_sem(key, 2, IPC_CREAT|0600);
+    init_sem(semid, 2);
+}
 
 
 void __create_tmp_dir(){
@@ -58,16 +71,34 @@ void __setup_simulation_time(){
     TIME_CURR = TIME_START;
 }
 
+void __delete_pool_resources(int pool_num){
+    key_t key;
+    int shmid;
+    int semid;
+
+    key = get_key(pool_num);
+    shmid = access_shared_mem(key, POOL_SHARED_MEM_SIZE[pool_num], 0600);
+    delete_shared_mem(shmid);
+
+    semid = access_sem(key, 2, 0600);
+    delete_sem(semid);
+}
+
 
 void setup(){
     __create_tmp_dir();
     signal(SIGUSR1, SIG_IGN); // Signal init
     __setup_simulation_time();
+    __create_pool_resources(OLIMPIC);
+    __create_pool_resources(LEISURE);
+    __create_pool_resources(PADDLING);
 }
 
 
 void clean_up(){
-
+    __delete_pool_resources(OLIMPIC);
+    __delete_pool_resources(LEISURE);
+    __delete_pool_resources(PADDLING);
 }
 
 
@@ -75,6 +106,7 @@ void disp_time(){
     int hour = TIME_CURR / 60;
     int min = TIME_CURR % 60;
 
+    cyan();
     if(hour < 10){
         printf("0");
     }
@@ -84,6 +116,7 @@ void disp_time(){
         printf("0");
     }
     printf("%d", min);
+    reset();
 }
 
 
