@@ -8,12 +8,14 @@
 
 #include "random.h"
 #include "pool.h"
+#include "keys_id.h"
+#include "utils.h"
+
 #include "low/key.h"
 #include "low/ps.h"
 #include "low/signal.h"
 #include "low/shared_mem.h"
 #include "low/files.h"
-#include "keys_id.h"
 
 
 int TIME_PER_SEC = 10; // 1 real second = (TIME_PER_SEC) minutes in simulation 
@@ -29,14 +31,7 @@ int TIME_CURR;
 bool POOL_IS_OPEN = false;
 
 
-// Converts HH:MM time format to minutes
-int time_HHMM(int hour, int min){
-    return hour * 60 + min;
-}
-
-
-void setup(){
-    // tmp
+void __create_tmp_dir(){
     switch(fork()){
         case FORK_FAILURE:
             perror(__func__);
@@ -49,13 +44,11 @@ void setup(){
             perror(__func__);
             exit(EXIT_FAILURE);
     }
-    sleep(1);
+    sleep(1); // Wait for './tmp' dir to be deleted first
     mkdir("./tmp", 0700);
+}
 
-    // Signal init
-    signal(SIGUSR1, SIG_IGN);
-
-    // Simulation time setup
+void __setup_simulation_time(){
     TIME_START = time_HHMM(9, 50);
     TIME_END = time_HHMM(14, 0);
 
@@ -66,18 +59,15 @@ void setup(){
 }
 
 
-void clean_up(){
-
+void setup(){
+    __create_tmp_dir();
+    signal(SIGUSR1, SIG_IGN); // Signal init
+    __setup_simulation_time();
 }
 
 
-bool rand_client(){
-    int spawn_client_perc = rand_int(0, 100);
-    if(spawn_client_perc <= SPAWN_CLIENT_PERC){
-        return true;
-    }
+void clean_up(){
 
-    return false;
 }
 
 
@@ -94,6 +84,16 @@ void disp_time(){
         printf("0");
     }
     printf("%d", min);
+}
+
+
+bool rand_client(){
+    int spawn_client_perc = rand_int(0, 100);
+    if(spawn_client_perc <= SPAWN_CLIENT_PERC){
+        return true;
+    }
+
+    return false;
 }
 
 
@@ -125,7 +125,7 @@ void open_cash(){
 
 void set_lifeguard(int pool_num){
     char str_pool_num[2];
-    snprintf(str_pool_num, 2, "%d", pool_num);
+    sprintf(str_pool_num, "%d", pool_num);
 
     execl(PS_LIFEGUARD_PATH, PS_LIFEGUARD_NAME, str_pool_num, NULL);
     perror(__func__);

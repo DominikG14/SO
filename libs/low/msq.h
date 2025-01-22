@@ -86,3 +86,15 @@ void delete_msq(int msqid){
         exit(EXIT_FAILURE);
     }
 }
+
+
+// int get_msq_count(int msqid){
+//     struct msqid_ds buffer;
+//     int status = msgctl(msqid, IPC_STAT, &buffer);
+//     if(status == MSQ_FAILURE){
+//         perror(__func__);
+//         exit(EXIT_FAILURE);
+//     }
+
+//     return buffer.msg_qnum;
+// }

@@ -5,8 +5,9 @@
 #include <signal.h>
 
 
-enum SIG__ABBR {
-    SIG_CLOSE_POOL = SIGUSR1,
+enum SIG_ABBR {
+    SIG_CLOSE_POOL = SIGUSR1, // Main -> Everyone
+    SIG_LEAVE_CASH_CHILD = SIGUSR1, // Client -> Child
 };
 
 

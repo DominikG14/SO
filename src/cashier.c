@@ -34,46 +34,61 @@ void open_cash(){
 }
 
 
-int main(){
-    open_cash();
-
-    int payment_time = 1;
+int accept_payment(){
     int status;
     int return_msqid;
     char* client_pid_str = NULL;
-    int client_pid;
     int fd_fifo;
-    while(USget_sem_value(CASH_SEMID, SEM_CASH_STATUS) == 0){
+
+    status = USget_msq(CASH_MSQID, 1, &client_pid_str);
+
+    if(status != MSQ_FAILURE){
+        printf("%d: Cashier recived: %s\n", getpid(), client_pid_str);
+        sleep(1);
+        fd_fifo = open(client_pid_str, O_WRONLY);
+
+        if(fd_fifo == FILE_FAILURE){
+            perror(__func__);
+            exit(EXIT_FAILURE);
+        }
+    }
+    write(fd_fifo, "OK", 3);
+
+    free(client_pid_str), client_pid_str = NULL;
+    printf("\t status %d\n", status);
+    return status;
+}
+
+
+void next_client(){
+    operate_sem(CASH_SEMID, SEM_CASH_PAYMENT, SEM_SIGNAL);
+}
+
+
+int cash_closed(){
+    return USget_sem_value(CASH_SEMID, SEM_CASH_STATUS);
+}
+
+
+int main(){
+    open_cash();
+
+    int payment_time;
+    int payment_status;
+    while(true){
+        payment_time = rand_int(1, 3);
         sleep(payment_time);
 
-        operate_sem(CASH_SEMID, SEM_CASH_PAYMENT, SEM_SIGNAL);
+        next_client();
+        if(cash_closed()) break;
 
-        status = USget_msq(CASH_MSQID, 1, &client_pid_str);
-
-        if(USget_sem_value(CASH_SEMID, SEM_CASH_STATUS)){
-            break;
-        }
-
-        if(status != MSQ_FAILURE){
-            printf("%d: Cashier recived: %s\n", getpid(), client_pid_str);
-            sleep(1);
-            fd_fifo = open(client_pid_str, O_WRONLY);
-            if(fd_fifo == FILE_FAILURE){
-                perror(__func__);
-                exit(EXIT_FAILURE);
-            }
-            write(fd_fifo, "OK", 3);
-
-            payment_time++;
-            free(client_pid_str), client_pid_str = NULL;
-            continue;
-        }
+        payment_status = accept_payment();
+        if(payment_status != FAILURE) continue;
 
         perror(__func__);
         exit(EXIT_FAILURE);
     }
 
     delete_sem(CASH_SEMID);
-
     return 0;
 }

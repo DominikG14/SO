@@ -1,20 +1,22 @@
 #pragma once
 
-
+// Keys to access IPCS
 enum KEYS {
-    OLIMPIC_POOL__KEY_ID,
-    LEISURE_POOL__KEY_ID,
-    PADDLING_POOL__KEY_ID,
+    POOL_OLIMPIC_KEY_ID,
+    POOL_LEISURE_KEY_ID,
+    POOL_PADDLING_KEY_ID,
     CASH_KEY_ID,
 };
 
 
-char* CASHIER__TMP_FILE_MSQID = "./tmp/cash_msqid";
-char* CASHIER__TMP_FILE_SEMID = "./tmp/cash_semid";
-
-
-enum SEM__CASHIER_SEMS {
-    SEM_CASH_PAYMENT,
-    SEM_CASH_STATUS,
+enum SEM_CASH {
+    SEM_CASH_PAYMENT, // Waiting to queue
+    SEM_CASH_STATUS,  // Queue status, 1 = Closed;
     SEM_CASH_NUM,
+};
+
+
+enum GENERAL_STATE {
+    SUCCESS = 0,
+    FAILURE = -1
 };

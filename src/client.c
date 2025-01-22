@@ -4,27 +4,70 @@
 #include <sys/stat.h>
 
 #include "client.h"
+#include "keys_id.h"
+
 #include "low/signal.h"
 #include "low/sem.h"
 #include "low/files.h"
 #include "low/msq.h"
 #include "low/key.h"
-#include "keys_id.h"
+#include "low/threads.h"
 
 
-char* getpid_str(){
-    char* pid_str =(char*) malloc(20);
-    if(pid_str == NULL){
+Client client;
+Child  child;
+
+
+void spawn_client(){
+    srand(getpid());
+    
+    // Set child flags
+    child.tid = -1;
+
+    // Set Client data
+    client.age = rand_int(11, 70);
+    client.swim_cap_on = rand_swim_cap();
+    int child_age = rand_int(1, 10);
+
+    printf("%d: swim_cap: %d, age %d", getpid(), client.swim_cap_on, client.age);
+    if(rand_child(client.age, child_age)){
+        printf(", child: %d", child_age);
+
+        child.age = child_age;
+        child.swim_cap_on = rand_swim_cap();
+        child.WAIT_IN_CASH = true;
+
+        if(child.age <= 3){
+            child.diaper_on = true;
+        }
+
+        client.child = child;
+
+        pthread_t child_tid = new_thread(spawn_child, NULL);
+        child.tid = child_tid;
+    }
+    printf("\n");
+
+    handle_signal(SIG_CLOSE_POOL, leave_pool);
+}
+
+
+char* get_tmp(int id){
+    char* id_str =(char*) malloc(20);
+    if(id_str == NULL){
         perror(__func__);
         exit(EXIT_FAILURE);
     }
 
-    sprintf(pid_str, "./tmp/%d", getpid());
-    return pid_str;
+    sprintf(id_str, "./tmp/%d", id);
+    return id_str;
 }
 
 
 void leave_pool(){
+    if(client.child.tid != -1){
+
+    }
     printf("%d: Client left the pool\n", getpid());
     exit(EXIT_SUCCESS);
 }
@@ -52,7 +95,7 @@ void wait_in_cash_queue(){
     }
 
     int cash_msqid = access_msq(key, 0200);
-    char* pid_str = getpid_str();
+    char* pid_str = get_tmp(getpid());
     send_msq(cash_msqid, pid_str, 1);
     status = mkfifo(pid_str, 0600);
     if(status == -1){
@@ -60,15 +103,15 @@ void wait_in_cash_queue(){
         exit(EXIT_FAILURE);
     }
 
-    int fifo_fd = open(pid_str, O_RDONLY);
-    if( fifo_fd == FILE_FAILURE){
+    int fd_fifo = open(pid_str, O_RDONLY);
+    if(fd_fifo == FILE_FAILURE){
         perror(__func__);
         exit(EXIT_FAILURE);
     }
 
     char buffer[100];
-    while(1) {
-        ssize_t bytes_read = read(fifo_fd, buffer, sizeof(buffer) - 1);
+    while(true){
+        ssize_t bytes_read = read(fd_fifo, buffer, sizeof(buffer) - 1);
         if (bytes_read > 0) {
             buffer[bytes_read] = '\0';
             printf("%d: Client recived: %s\n", getpid(), buffer);
@@ -76,33 +119,33 @@ void wait_in_cash_queue(){
         }
     }
 
-    close(fifo_fd);
+    child.WAIT_IN_CASH = false;
+
+    close(fd_fifo);
     unlink(pid_str);
     
     free(pid_str), pid_str = NULL;
-    printf("%d: Client left the queue\n", getpid());
+
+    printf("%d: Client left the cash\n", getpid());
+}
+
+
+void* spawn_child(){
+    while(child.WAIT_IN_CASH);
+    printf("%ld: Child of %d left the cash\n", child.tid, getpid());
+
+    while(child.SWIM_IN_POOL);
+    printf("%ld: Child of %d left the pool\n", child.tid, getpid());
+    pthread_exit(EXIT_SUCCESS);
 }
 
 
 int main(){
-    setup();
-
-    Client client;
-
-    client.age = rand_int(11, 70);
-    client.swim_cap_on = rand_swim_cap();
-    int child_age = rand_int(1, 10);
-
-    printf("%d: swim_cap: %d, age %d", getpid(), client.swim_cap_on, client.age);
-    if(rand_child(client.age, child_age)){
-        printf(", child: %d", child_age);
-    }
-    printf("\n");
-
-    signal(SIG_CLOSE_POOL, leave_pool);
+    spawn_client();
     wait_in_cash_queue();
 
     while(true){
+
     }
 
     return 0;
