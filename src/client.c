@@ -20,47 +20,114 @@
 
 Client client;
 Child  child;
+int CURRENT_POOL;
 
 
-void* spawn_child(){
-    while(child.WAIT_IN_CASH);
-    if(child.SWIM_IN_POOL){
-        printf_clr(green, "%d", getpid());
-        printf(": Child  (");
-        printf_clr(yellow, "Cash");
-        printf(")\n");
+void disp_client_data(){
+    // Client Age
+    printf_clr(blue, "| ");
+    printf("age: %d", client.age);
 
-        printf("%ld: Child of %d left the cash\n", child.tid, getpid());
-    }
-    else {
-        printf_clr(green, "%d", getpid());
-        printf(": Child left (");
-        printf_clr(yellow, "Cash");
-        printf_clr(red, " is closed");
-        printf(")\n");
+    // Client swim cap
+    printf_clr(blue, " | ");
+    printf("swim_cap_on: ");
+    if(client.swim_cap_on) printf_clr(green, "yes");
+    else printf_clr(red, "no");
 
-        pthread_exit(EXIT_SUCCESS);
-    }
+    // Client child
+    printf_clr(blue, " | ");
+    printf("with_child: ");
+    if(child.tid != -1) printf_clr(green, "yes");
+    else printf_clr(red, "no");
 
-    while(child.SWIM_IN_POOL);
-    printf_clr(green, "%d", getpid());
-    printf(" -> ");
-    printf_clr(green, "%.6ld", child.tid);
-    printf(": Child left (");
-    printf_clr(cyan, "Pool");
-    printf_clr(red, " is closed");
-    printf(")\n");
+    // End
+    printf_clr(blue, " |");
+}
+
+
+void disp_child_data(){
+    // Child Parent
+
+    // Child Age
+    printf_clr(green, "| ");
+    printf("age: %d", child.age);
+
+    // Child swim cap
+    printf_clr(green, " | ");
+    printf("swim_cap_on: ");
+    if(child.swim_cap_on) printf_clr(green, "yes");
+    else printf_clr(red, "no");
+
+    // Child diaper
+    printf_clr(green, " | ");
+    printf("diaper_on: ");
+    if(child.diaper_on) printf_clr(green, "yes");
+    else printf_clr(red, "no");
+
+    // End
+    printf_clr(green, " |");
+}
+
+
+void child_leave_complex(){
+    log_console(getpid(),
+        WHO__CHILD,
+        ACTION__LEFT,
+        LOCATION__POOL_COMPLEX,
+        REASON__COMPLEX_CLOSED
+    );
+
     pthread_exit(EXIT_SUCCESS);
 }
 
 
-void leave_pool(){
+void* spawn_child(){
+    log_console_with_data(getpid(),
+        WHO__CHILD,
+        ACTION__ENTERED,
+        LOCATION__CASH_QUEUE,
+        REASON__NONE,
+        disp_child_data
+    );
+
+
+
+    while(child.WAIT_IN_CASH);
+    if(child.SWIM_IN_POOL){
+        log_console(getpid(),
+            WHO__CHILD,
+            ACTION__LEFT,
+            LOCATION__CASH_QUEUE,
+            REASON__PAYMENT_FINISHED
+        );
+    }
+    else {
+        log_console(getpid(),
+            WHO__CHILD,
+            ACTION__LEFT,
+            LOCATION__CASH_QUEUE,
+            REASON__CASH_CLOSED
+        );
+
+        child_leave_complex();
+    }
+
+    while(child.SWIM_IN_POOL);
+    log_console(getpid(),
+        WHO__CHILD,
+        ACTION__LEFT,
+        CURRENT_POOL,
+        REASON__END_OF_SWIM_TIME
+    );
+    child_leave_complex();
+}
+
+
+void client_leave_complex(){
     if(child.tid != -1){
         child.SWIM_IN_POOL = false;
         pthread_join(child.tid, NULL);
     }
-    printf_clr(blue, "%d", getpid());
-    printf(": Client left the pool\n");
 
     log_console(getpid(),
         WHO__CLIENT,
@@ -84,10 +151,7 @@ void spawn_client(){
     client.swim_cap_on = rand_swim_cap();
     int child_age = rand_int(CHILD_MIN_AGE, CHILD_MAX_AGE);
 
-    printf("%d: swim_cap: %d, age %d", getpid(), client.swim_cap_on, client.age);
     if(rand_child(client.age, child_age)){
-        printf(", child: %d", child_age);
-
         child.age = child_age;
         child.swim_cap_on = rand_swim_cap();
         child.WAIT_IN_CASH = true;
@@ -100,9 +164,16 @@ void spawn_client(){
         pthread_t child_tid = new_thread(spawn_child, NULL);
         child.tid = child_tid;
     }
-    printf("\n");
 
-    handle_signal(SIG_CLOSE_POOL, leave_pool);
+    handle_signal(SIG_CLOSE_POOL, client_leave_complex);
+
+    log_console_with_data(getpid(),
+        WHO__CLIENT,
+        ACTION__ENTERED,
+        LOCATION__CASH_QUEUE,
+        REASON__NONE,
+        disp_client_data
+    );
 }
 
 
@@ -171,7 +242,14 @@ void wait_in_cash_queue(){
         ssize_t bytes_read = read(fd_fifo, buffer, sizeof(buffer) - 1);
         if (bytes_read > 0) {
             buffer[bytes_read] = '\0';
-            // printf("%d: Client recived: %s\n", getpid(), buffer);
+
+            log_console(getpid(),
+                WHO__CLIENT,
+                ACTION__RECIVED_BILL,
+                LOCATION__CASH_QUEUE,
+                REASON__NONE
+            );
+
             break;
         }
     }
@@ -193,6 +271,7 @@ void wait_in_cash_queue(){
 
 void join_paddling_pool(){
     bool WAIT_IN_QUEUE = true;
+    CURRENT_POOL = PADDLING;
 
     key_t key = get_key(POOL_PADDLING_KEY_ID);
 
@@ -215,8 +294,14 @@ void join_paddling_pool(){
             WHO__CLIENT,
             ACTION__ENTERED,
             LOCATION__PADDLING_QUEUE,
-            NONE
-        ); 
+            REASON__NONE
+        );
+        log_console(getpid(),
+            WHO__CHILD,
+            ACTION__ENTERED,
+            LOCATION__PADDLING_QUEUE,
+            REASON__NONE
+        );
 
         int status;
         while(true){
@@ -225,6 +310,7 @@ void join_paddling_pool(){
             if(USget_sem_value(pool_semid, SEM_CASH_STATUS)){
                 child.SWIM_IN_POOL = false;
                 child.WAIT_IN_CASH = false;
+                
                 pthread_join(child.tid, NULL);
 
                 log_console(getpid(),
@@ -243,7 +329,7 @@ void join_paddling_pool(){
                     WHO__CLIENT,
                     ACTION__LEFT,
                     LOCATION__PADDLING_QUEUE,
-                    NONE
+                    REASON__NONE
                 ); 
 
                 break;
@@ -258,7 +344,7 @@ void join_paddling_pool(){
         WHO__CLIENT,
         ACTION__ENTERED,
         LOCATION__PADDLING_POOL,
-        NONE
+        REASON__NONE
     );
 
     sleep(rand_swim_time());
@@ -282,7 +368,7 @@ void choose_pool(){
         join_paddling_pool();
     }
 
-    leave_pool();
+    client_leave_complex();
 }
 
 

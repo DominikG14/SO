@@ -8,6 +8,7 @@
 #include "low/sem.h"
 #include "low/msq.h"
 
+#include "logging.h"
 #include "random.h"
 #include "keys_id.h"
 
@@ -17,7 +18,13 @@ int CASH_SEMID;
 
 
 void close_cash(){
-    printf("%d: Cash closed\n", getpid());
+    log_console(getpid(),
+        WHO__CASHIER,
+        ACTION__CLOSED,
+        LOCATION__CASH_QUEUE,
+        REASON__COMPLEX_CLOSED
+    );
+
     operate_sem(CASH_SEMID, SEM_CASH_STATUS, SEM_SIGNAL);
     delete_msq(CASH_MSQID);
 }
@@ -30,7 +37,13 @@ void open_cash(){
     CASH_MSQID = access_msq(key, IPC_CREAT|0600);
 
     handle_signal(SIG_CLOSE_POOL, close_cash);
-    printf("%d: Cash opened\n", getpid());
+    
+    log_console(getpid(),
+        WHO__CASHIER,
+        ACTION__OPENED,
+        LOCATION__CASH_QUEUE,
+        REASON__NONE
+    );
 }
 
 
@@ -43,7 +56,13 @@ int accept_payment(){
     status = USget_msq(CASH_MSQID, 1, &client_pid_str);
 
     if(status != MSQ_FAILURE){
-        // printf("%d: Cashier recived: %s\n", getpid(), client_pid_str);
+        log_console(getpid(),
+            WHO__CASHIER,
+            ACTION__RECIVED_PAY,
+            LOCATION__CASH_QUEUE,
+            REASON__NONE
+        );
+
         sleep(1);
         fd_fifo = open(client_pid_str, O_WRONLY);
 
@@ -89,5 +108,11 @@ int main(){
     }
 
     delete_sem(CASH_SEMID);
+    log_console(getpid(),
+        WHO__CASHIER,
+        ACTION__LEFT,
+        LOCATION__POOL_COMPLEX,
+        REASON__COMPLEX_CLOSED
+    );
     return 0;
 }

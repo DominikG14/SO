@@ -11,6 +11,7 @@
 #include "keys_id.h"
 #include "utils.h"
 #include "color.h"
+#include "logging.h"
 
 #include "low/key.h"
 #include "low/sem.h"
@@ -107,6 +108,7 @@ void disp_time(){
     int min = TIME_CURR % 60;
 
     cyan();
+    printf("\n");
     if(hour < 10){
         printf("0");
     }
@@ -115,7 +117,7 @@ void disp_time(){
     if(min < 10){
         printf("0");
     }
-    printf("%d", min);
+    printf("%d\n", min);
     reset();
 }
 
@@ -215,9 +217,15 @@ int main() {
     while(TIME_CURR <= TIME_END){
         disp_time();
 
-
         // Open pool
         if(!POOL_IS_OPEN && TIME_CURR >= POOL_OPEN_TIME && TIME_CURR <= POOL_CLOSE_TIME){
+            log_console(getpid(),
+                WHO__POOL_COMPLEX,
+                ACTION__OPENED,
+                LOCATION__POOL_COMPLEX,
+                REASON__NONE
+            );
+
             POOL_IS_OPEN = true;
             open_cash();
             set_all_lifeguards();
@@ -227,6 +235,12 @@ int main() {
 
         // Close pool
         if(POOL_IS_OPEN && TIME_CURR > POOL_CLOSE_TIME){
+            log_console(getpid(),
+                WHO__POOL_COMPLEX,
+                ACTION__CLOSED,
+                LOCATION__POOL_COMPLEX,
+                REASON__COMPLEX_CLOSED
+            );
             close_cash();
             remove_all_clients();
             remove_all_lifeguards();
@@ -236,7 +250,12 @@ int main() {
 
         // Clients
         if(TIME_CURR < POOL_OPEN_TIME || TIME_CURR > POOL_CLOSE_TIME){
-            printf(" - Pool closed!");
+            log_console(getpid(),
+                WHO__POOL_COMPLEX,
+                ACTION__CLOSED,
+                LOCATION__POOL_COMPLEX,
+                REASON__NONE
+            );
         }
 
         else if(rand_client()){
@@ -256,10 +275,10 @@ int main() {
 
 
         // Time
-        printf("\n");
         sleep(1);
         TIME_CURR += TIME_PER_SEC;
     }
+    printf("\n");
 
     clean_up();
     return 0;

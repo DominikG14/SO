@@ -2,26 +2,39 @@
 #include <stdio.h>
 
 #include "low/signal.h"
+#include "logging.h"
 
 
-bool LIFEGUARD__WATCH_POOL = true;
+bool LIFEGUARD_WATCH_POOL = true;
+int GUARDED_POOL;
 
 
 void remove_lifeguard(){
-    LIFEGUARD__WATCH_POOL = false;
+    LIFEGUARD_WATCH_POOL = false;
 }
 
 
 int main(int argc, char* argv[]){
-    int pool_num = atoi(argv[1]);
-    printf("%d: Lifeguard set for pool: %d\n", getpid(), pool_num);
+    GUARDED_POOL = atoi(argv[1]);
+
+    log_console(getpid(),
+        WHO__LIFEGUARD,
+        ACTION__ENTERED,
+        GUARDED_POOL,
+        REASON__NONE
+    );
 
     handle_signal(SIGUSR1, remove_lifeguard);
-    while(LIFEGUARD__WATCH_POOL){
+    while(LIFEGUARD_WATCH_POOL){
         // TODO: Add lifeguard functionality here
     }
 
-    printf("%d: Lifeguard left pool: %d\n", getpid(), pool_num);
+    log_console(getpid(),
+        WHO__LIFEGUARD,
+        ACTION__LEFT,
+        GUARDED_POOL,
+        REASON__COMPLEX_CLOSED
+    );
 
     return 0;
 }
