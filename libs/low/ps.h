@@ -1,20 +1,20 @@
 enum FORK__STATE {
-    FORK__SUCCESS = 0,
-    FORK__FAILURE = -1,
+    FORK_SUCCESS = 0,
+    FORK_FAILURE = -1,
 };
 
 
-pid_t PS__CLIENT_PIDS[1000];
-size_t PS__CLIENT_RUNNING = 0;
-pid_t PS__CASHIER_PID;
-pid_t PS__LIFEGUARD_PIDS[POOL__NUM];
+pid_t CLIENT_PIDS[1000];
+size_t CLIENTS_NUM = 0;
+pid_t CASHIER_PID;
+pid_t LIFEGUARD_PIDS[POOL_NUM];
 
 
-const char* PS__CLIENT_PATH = "build/client";
-const char* PS__CLIENT_NAME  = "./build/client";
+const char* PS_CLIENT_PATH = "build/client";
+const char* PS_CLIENT_NAME  = "./build/client";
 
-const char* PS__CASHIER_PATH = "build/cashier"; 
-const char* PS__CASHIER_NAME  = "./build/cashier";
+const char* PS_CASHIER_PATH = "build/cashier"; 
+const char* PS_CASHIER_NAME  = "./build/cashier";
 
-const char* PS__LIFEGUARD_PATH = "build/lifeguard"; 
-const char* PS__LIFEGUARD_NAME  = "./build/lifeguard";
+const char* PS_LIFEGUARD_PATH = "build/lifeguard"; 
+const char* PS_LIFEGUARD_NAME  = "./build/lifeguard";

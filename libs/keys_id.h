@@ -5,7 +5,7 @@ enum KEYS {
     OLIMPIC_POOL__KEY_ID,
     LEISURE_POOL__KEY_ID,
     PADDLING_POOL__KEY_ID,
-    CASHIER__KEY_ID,
+    CASH_KEY_ID,
 };
 
 
@@ -14,6 +14,7 @@ char* CASHIER__TMP_FILE_SEMID = "./tmp/cash_semid";
 
 
 enum SEM__CASHIER_SEMS {
-    SEM__CASHIER_PAYMENT,
-    SEM__CASHIER_STATUS,
+    SEM_CASH_PAYMENT,
+    SEM_CASH_STATUS,
+    SEM_CASH_NUM,
 };

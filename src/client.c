@@ -1,20 +1,86 @@
 #include <stdio.h>
 #include <stdbool.h>
 #include <unistd.h>
+#include <sys/stat.h>
 
 #include "client.h"
 #include "low/signal.h"
 #include "low/sem.h"
 #include "low/files.h"
-#include "low/msg_q.h"
+#include "low/msq.h"
 #include "low/key.h"
 #include "keys_id.h"
 
 
-bool CLIENT__SWIM = true;
+char* getpid_str(){
+    char* pid_str =(char*) malloc(20);
+    if(pid_str == NULL){
+        perror(__func__);
+        exit(EXIT_FAILURE);
+    }
+
+    sprintf(pid_str, "./tmp/%d", getpid());
+    return pid_str;
+}
+
 
 void leave_pool(){
-    CLIENT__SWIM = false;
+    printf("%d: Client left the pool\n", getpid());
+    exit(EXIT_SUCCESS);
+}
+
+
+void wait_in_cash_queue(){
+    key_t key = get_key(CASH_KEY_ID);
+    int cash_semid = access_sem(key, 1, 0600);
+
+    int status;
+    while(true){
+        status = USoperate_sem(cash_semid, SEM_CASH_PAYMENT, SEM_WAIT);
+
+        if(USget_sem_value(cash_semid, SEM_CASH_STATUS)){
+            printf("%d: Cash is closed, Client leaving\n", getpid());
+            exit(EXIT_SUCCESS);
+        }
+
+        if(status == SEM_SUCCESS){
+            break;
+        }
+
+        perror(__func__);
+        exit(EXIT_FAILURE);
+    }
+
+    int cash_msqid = access_msq(key, 0200);
+    char* pid_str = getpid_str();
+    send_msq(cash_msqid, pid_str, 1);
+    status = mkfifo(pid_str, 0600);
+    if(status == -1){
+        perror(__func__);
+        exit(EXIT_FAILURE);
+    }
+
+    int fifo_fd = open(pid_str, O_RDONLY);
+    if( fifo_fd == FILE_FAILURE){
+        perror(__func__);
+        exit(EXIT_FAILURE);
+    }
+
+    char buffer[100];
+    while(1) {
+        ssize_t bytes_read = read(fifo_fd, buffer, sizeof(buffer) - 1);
+        if (bytes_read > 0) {
+            buffer[bytes_read] = '\0';
+            printf("%d: Client recived: %s\n", getpid(), buffer);
+            break;
+        }
+    }
+
+    close(fifo_fd);
+    unlink(pid_str);
+    
+    free(pid_str), pid_str = NULL;
+    printf("%d: Client left the queue\n", getpid());
 }
 
 
@@ -33,25 +99,11 @@ int main(){
     }
     printf("\n");
 
-    handle_signal(SIG__CLOSE_POOL, leave_pool);
+    signal(SIG_CLOSE_POOL, leave_pool);
+    wait_in_cash_queue();
 
-    key_t key = get_key(CASHIER__KEY_ID);
-    int cash_semid = access_sem(key, 2, IPC_CREAT|0200);
-    int cash_msqid = access_msg_q(key, IPC_CREAT|0200);
-    operate_sem(cash_semid, SEM__CASHIER_PAYMENT, SEM__WAIT);
-    sleep(1);
-
-    if(get_sem_value(cash_semid, SEM__CASHIER_STATUS) == 1) {
-        printf("Cashier is closed. Exiting.\n");
-        exit(EXIT_SUCCESS);
+    while(true){
     }
-
-    send_msg_q(cash_msqid, "TEST", 1);
-
-    while(CLIENT__SWIM){
-
-    }
-    printf("%d: Client left the pool\n", getpid());
 
     return 0;
 }

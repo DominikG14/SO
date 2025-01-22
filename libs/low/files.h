@@ -11,7 +11,7 @@ const int FILE__SIZE = 2048;
 
 
 enum FILE__STATE {
-    FILE__FAILURE = -1,
+    FILE_FAILURE = -1,
     FILE__SUCCESS = 0,
 };
 
@@ -30,7 +30,7 @@ char* alloc(){
 char* read_file(const char* filepath, size_t* result_size){
     // File opening
     int fd = open(filepath, O_RDONLY);
-    if(fd == FILE__FAILURE){
+    if(fd == FILE_FAILURE){
         perror(__func__);
         exit(EXIT_SUCCESS);
     }
@@ -73,7 +73,7 @@ char* read_file(const char* filepath, size_t* result_size){
 
 void write_file(char* filepath, char* text){
     int fd = open(filepath, O_CREAT|O_WRONLY|O_TRUNC, 0600);
-    if(fd == FILE__FAILURE){
+    if(fd == FILE_FAILURE){
         perror(__func__);
         exit(EXIT_FAILURE);
     }

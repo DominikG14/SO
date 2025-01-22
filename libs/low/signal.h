@@ -6,7 +6,7 @@
 
 
 enum SIG__ABBR {
-    SIG__CLOSE_POOL = SIGUSR1,
+    SIG_CLOSE_POOL = SIGUSR1,
 };
 
 

@@ -5,10 +5,10 @@ enum POOL__TYPES {
     OLIMPIC,
     LEISURE,
     PADDLING,
-    POOL__NUM,
+    POOL_NUM,
 };
 
-int POOL__SHMID[POOL__NUM];
+int POOL__SHMID[POOL_NUM];
 
 const int OLIMPIC_POOL__MAX_SIZE = 10;
 const int LEISURE_POOL__MAX_SIZE  = 10;

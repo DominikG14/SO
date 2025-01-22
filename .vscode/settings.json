@@ -9,6 +9,13 @@
         "stdbool.h": "c",
         "signal.h": "c",
         "files.h": "c",
-        "keys_id.h": "c"
+        "keys_id.h": "c",
+        "system_error": "cpp",
+        "array": "cpp",
+        "functional": "cpp",
+        "tuple": "cpp",
+        "type_traits": "cpp",
+        "utility": "cpp",
+        "numbers": "c"
     }
 }

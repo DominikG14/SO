@@ -6,67 +6,74 @@
 #include "low/files.h"
 #include "low/key.h"
 #include "low/sem.h"
-#include "low/msg_q.h"
+#include "low/msq.h"
 
 #include "random.h"
 #include "keys_id.h"
 
 
-int CASHIER__MSQID;
-int CASHIER__SEMID;
-
-
-void open_cash(){
-    key_t key = get_key(CASHIER__KEY_ID);
-
-    CASHIER__MSQID = access_msg_q(key, IPC_CREAT|0600);
-
-    CASHIER__SEMID = access_sem(key, 2, IPC_CREAT|0600);
-    init_sem(CASHIER__SEMID, 2);
-    operate_sem(CASHIER__SEMID, SEM__CASHIER_PAYMENT, SEM__SIGNAL);
-
-    printf("%d: Cash opened\n", getpid());
-}
+int CASH_MSQID;
+int CASH_SEMID;
 
 
 void close_cash(){
-    operate_sem(CASHIER__SEMID, SEM__CASHIER_STATUS, SEM__SIGNAL); // close cash
+    printf("%d: Cash closed\n", getpid());
+    operate_sem(CASH_SEMID, SEM_CASH_STATUS, SEM_SIGNAL);
+    delete_msq(CASH_MSQID);
+}
 
-    // Signaling Clients to leave
-    while(get_sem_value(CASHIER__SEMID, SEM__CASHIER_PAYMENT) < 0) {
-        operate_sem(CASHIER__SEMID, SEM__CASHIER_PAYMENT, SEM__SIGNAL);
-    }
 
-    // Discarding messages
-    MSG_Q__BUFFER msg;
-    while(msgrcv(CASHIER__MSQID, &msg, sizeof(msg.text), 0, IPC_NOWAIT) != -1) {
-        printf("Discarding message\n");
-    }
+void open_cash(){
+    key_t key = get_key(CASH_KEY_ID);
+    CASH_SEMID = access_sem(key, SEM_CASH_NUM, IPC_CREAT|0600);
+    init_sem(CASH_SEMID, 2);
+    CASH_MSQID = access_msq(key, IPC_CREAT|0600);
 
-    delete_sem(CASHIER__SEMID);
-    delete_msg_q(CASHIER__MSQID);
+    handle_signal(SIG_CLOSE_POOL, close_cash);
+    printf("%d: Cash opened\n", getpid());
 }
 
 
 int main(){
     open_cash();
 
-    handle_signal(SIG__CLOSE_POOL, close_cash);
-    operate_sem(CASHIER__SEMID, SEM__CASHIER_PAYMENT, SEM__SIGNAL);
-
-    char* text;
-    int payment_time;
-    while(get_sem_value(CASHIER__SEMID, SEM__CASHIER_STATUS) == 0){
-        payment_time = 10;
+    int payment_time = 1;
+    int status;
+    int return_msqid;
+    char* client_pid_str = NULL;
+    int client_pid;
+    int fd_fifo;
+    while(USget_sem_value(CASH_SEMID, SEM_CASH_STATUS) == 0){
         sleep(payment_time);
-        text = get_msg_q(CASHIER__MSQID, 1);
-        printf("\t%s\n", text);
-        free(text), text = NULL;
 
-        operate_sem(CASHIER__SEMID, SEM__CASHIER_PAYMENT, SEM__SIGNAL);
+        operate_sem(CASH_SEMID, SEM_CASH_PAYMENT, SEM_SIGNAL);
+
+        status = USget_msq(CASH_MSQID, 1, &client_pid_str);
+
+        if(USget_sem_value(CASH_SEMID, SEM_CASH_STATUS)){
+            break;
+        }
+
+        if(status != MSQ_FAILURE){
+            printf("%d: Cashier recived: %s\n", getpid(), client_pid_str);
+            sleep(1);
+            fd_fifo = open(client_pid_str, O_WRONLY);
+            if(fd_fifo == FILE_FAILURE){
+                perror(__func__);
+                exit(EXIT_FAILURE);
+            }
+            write(fd_fifo, "OK", 3);
+
+            payment_time++;
+            free(client_pid_str), client_pid_str = NULL;
+            continue;
+        }
+
+        perror(__func__);
+        exit(EXIT_FAILURE);
     }
 
-    printf("%d: Cash closed\n", getpid());
-    
+    delete_sem(CASH_SEMID);
+
     return 0;
 }
