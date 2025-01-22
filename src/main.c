@@ -21,17 +21,30 @@
 #include "low/files.h"
 
 
-int TIME_PER_SEC = 10; // 1 real second = (TIME_PER_SEC) minutes in simulation 
+int TIME_PER_SEC = 20; // 1 real second = (TIME_PER_SEC) minutes in simulation 
 int TIME_START;
 int TIME_END;
 
-int POOL_OPEN_TIME;
-int POOL_CLOSE_TIME;
+int COMPLEX_OPEN_TIME;
+int COMPLEX_CLOSE_TIME;
 
 int SPAWN_CLIENT_PERC = 100;
 
 int TIME_CURR;
 bool POOL_IS_OPEN = false;
+
+
+bool open_complex_time(){
+    return !POOL_IS_OPEN && TIME_CURR >= COMPLEX_OPEN_TIME && TIME_CURR <= COMPLEX_CLOSE_TIME;
+}
+
+bool close_complex_time(){
+    return POOL_IS_OPEN && TIME_CURR > COMPLEX_CLOSE_TIME;
+}
+
+bool complex_is_closed(){
+    return TIME_CURR < COMPLEX_OPEN_TIME || TIME_CURR > COMPLEX_CLOSE_TIME;
+}
 
 
 void __create_pool_resources(int pool_num){
@@ -62,15 +75,17 @@ void __create_tmp_dir(){
     mkdir("./tmp", 0700);
 }
 
+
 void __setup_simulation_time(){
     TIME_START = time_HHMM(9, 50);
     TIME_END = time_HHMM(14, 0);
 
-    POOL_OPEN_TIME = time_HHMM(10, 0);
-    POOL_CLOSE_TIME = time_HHMM(13, 30);
+    COMPLEX_OPEN_TIME = time_HHMM(10, 0);
+    COMPLEX_CLOSE_TIME = time_HHMM(13, 31);
 
     TIME_CURR = TIME_START;
 }
+
 
 void __delete_pool_resources(int pool_num){
     key_t key;
@@ -103,9 +118,9 @@ void clean_up(){
 }
 
 
-void disp_time(){
-    int hour = TIME_CURR / 60;
-    int min = TIME_CURR % 60;
+void disp_time(int time){
+    int hour = time / 60;
+    int min = time % 60;
 
     cyan();
     printf("\n");
@@ -209,16 +224,35 @@ void remove_all_clients(){
 }
 
 
+void close_complex(){
+    log_console(getpid(),
+        WHO__POOL_COMPLEX,
+        ACTION__CLOSED,
+        LOCATION__POOL_COMPLEX,
+        REASON__COMPLEX_CLOSED
+    );
+
+    close_cash();
+    remove_all_clients();
+    remove_all_lifeguards();
+    POOL_IS_OPEN = false;
+}
+
+
 int main() {
     setup();
 
     pid_t pid;
 
     while(TIME_CURR <= TIME_END){
-        disp_time();
+        if(open_complex_time()) disp_time(COMPLEX_OPEN_TIME);
+        else if(close_complex_time()) disp_time(COMPLEX_CLOSE_TIME);
+        else disp_time(TIME_CURR);
 
-        // Open pool
-        if(!POOL_IS_OPEN && TIME_CURR >= POOL_OPEN_TIME && TIME_CURR <= POOL_CLOSE_TIME){
+
+
+        // Open complex
+        if(open_complex_time()){
             log_console(getpid(),
                 WHO__POOL_COMPLEX,
                 ACTION__OPENED,
@@ -230,26 +264,19 @@ int main() {
             open_cash();
             set_all_lifeguards();
             sleep(1); // Wait for staff to setup
+            continue;
         }
 
 
         // Close pool
-        if(POOL_IS_OPEN && TIME_CURR > POOL_CLOSE_TIME){
-            log_console(getpid(),
-                WHO__POOL_COMPLEX,
-                ACTION__CLOSED,
-                LOCATION__POOL_COMPLEX,
-                REASON__COMPLEX_CLOSED
-            );
-            close_cash();
-            remove_all_clients();
-            remove_all_lifeguards();
-            POOL_IS_OPEN = false;
+        if(close_complex_time()){
+            close_complex();
+            continue;
         }
 
 
         // Clients
-        if(TIME_CURR < POOL_OPEN_TIME || TIME_CURR > POOL_CLOSE_TIME){
+        if(complex_is_closed()){
             log_console(getpid(),
                 WHO__POOL_COMPLEX,
                 ACTION__CLOSED,

@@ -23,6 +23,21 @@ Child  child;
 int CURRENT_POOL;
 
 
+bool client_is_underage(){
+    return client.age < 18; 
+}
+
+
+bool client_has_child(){
+    return child.tid != -1;
+}
+
+
+bool client_has_baby(){
+    return client_has_child() && child.age <= 3;
+}
+
+
 void disp_client_data(){
     // Client Age
     printf_clr(blue, "| ");
@@ -37,7 +52,7 @@ void disp_client_data(){
     // Client child
     printf_clr(blue, " | ");
     printf("with_child: ");
-    if(child.tid != -1) printf_clr(green, "yes");
+    if(client_has_child()) printf_clr(green, "yes");
     else printf_clr(red, "no");
 
     // End
@@ -124,7 +139,7 @@ void* spawn_child(){
 
 
 void client_leave_complex(){
-    if(child.tid != -1){
+    if(client_has_child()){
         child.SWIM_IN_POOL = false;
         pthread_join(child.tid, NULL);
     }
@@ -198,7 +213,7 @@ void wait_in_cash_queue(){
         status = USoperate_sem(cash_semid, SEM_CASH_PAYMENT, SEM_WAIT);
 
         if(USget_sem_value(cash_semid, SEM_CASH_STATUS)){
-            if(child.tid != -1){
+            if(client_has_child()){
                 child.SWIM_IN_POOL = false;
                 child.WAIT_IN_CASH = false;
                 pthread_join(child.tid, NULL);
@@ -360,15 +375,117 @@ void join_paddling_pool(){
     );
 
     operate_sem(pool_semid, SEM_POOL_ENTER, SEM_SIGNAL);
+    client_leave_complex();
+}
+
+
+void join_leisure_pool(){
+    while(true);
+}
+
+
+void join_olimpic_pool(){
+    bool WAIT_IN_QUEUE = true;
+    CURRENT_POOL = OLIMPIC;
+
+    key_t key = get_key(POOL_OLIMPIC_KEY_ID);
+
+    int pool_semid = access_sem(key, SEM_POOL_NUM, 0600);
+
+    int pool_shmid = access_shared_mem(key, POOL_SHARED_MEM_SIZE[OLIMPIC], 0600);
+    OlimpicPool* pool =(OlimpicPool*) get_shared_mem(pool_shmid);
+
+
+    if(pool->size  < POOL_SIZE[OLIMPIC]){
+        WAIT_IN_QUEUE = false;
+        pool->size += 1;
+        detach_shared_mem(pool);
+    }
+
+
+    if(WAIT_IN_QUEUE){
+
+        log_console(getpid(),
+            WHO__CLIENT,
+            ACTION__ENTERED,
+            LOCATION__OLIMPIC_QUEUE,
+            REASON__NONE
+        );
+
+        int status;
+        while(true){
+            status = USoperate_sem(pool_semid, SEM_POOL_ENTER, SEM_WAIT);
+
+            if(USget_sem_value(pool_semid, SEM_CASH_STATUS)){
+                log_console(getpid(),
+                    WHO__CLIENT,
+                    ACTION__LEFT,
+                    LOCATION__OLIMPIC_QUEUE,
+                    REASON__COMPLEX_CLOSED
+                );
+
+                exit(EXIT_SUCCESS);
+            }
+
+            if(status == SEM_SUCCESS){
+                
+                log_console(getpid(),
+                    WHO__CLIENT,
+                    ACTION__LEFT,
+                    LOCATION__OLIMPIC_QUEUE,
+                    REASON__NONE
+                ); 
+
+                break;
+            }
+
+            perror(__func__);
+            exit(EXIT_FAILURE);
+        }
+    }
+
+    log_console(getpid(),
+        WHO__CLIENT,
+        ACTION__ENTERED,
+        LOCATION__OLIMPIC_POOL,
+        REASON__NONE
+    );
+
+    sleep(rand_swim_time());
+    pool =(OlimpicPool*) get_shared_mem(pool_shmid);
+    pool->size -= 1;
+    detach_shared_mem(pool);
+
+    log_console(getpid(),
+        WHO__CLIENT,
+        ACTION__LEFT,
+        LOCATION__OLIMPIC_POOL,
+        REASON__END_OF_SWIM_TIME
+    );
+
+    operate_sem(pool_semid, SEM_POOL_ENTER, SEM_SIGNAL);
+    client_leave_complex();
 }
 
 
 void choose_pool(){
-    if(child.tid != -1 && child.age <= 5){
+    if(client_has_baby()){
         join_paddling_pool();
     }
 
-    client_leave_complex();
+    if(client_is_underage() || client_has_child()){
+        join_leisure_pool();
+    }
+
+    join_olimpic_pool();
+
+    // switch(rand_int(OLIMPIC, LEISURE)){
+    //     case OLIMPIC:
+    //         join_olimpic_pool();
+
+    //     case LEISURE:
+    //         join_leisure_pool();
+    // }
 }
 
 

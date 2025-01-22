@@ -8,7 +8,7 @@ enum POOL__TYPES {
     POOL_NUM,
 };
 
-const size_t POOL_OLIMPIC_MAX_SIZE  = 10;
+const size_t POOL_OLIMPIC_MAX_SIZE  = 2;
 const size_t POOL_LEISURE_MAX_SIZE  = 10;
 const size_t POOL_PADDLING_MAX_SIZE = 2;
 
