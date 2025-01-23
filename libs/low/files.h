@@ -7,7 +7,7 @@
 #include <fcntl.h>
 
 
-const int FILE__SIZE = 2048;
+const int FILE_SIZE = 2048;
 
 
 enum FILE__STATE {
@@ -17,10 +17,10 @@ enum FILE__STATE {
 
 
 char* alloc(){
-    char* result =(char*) malloc(FILE__SIZE * sizeof(char));
+    char* result =(char*) malloc(FILE_SIZE * sizeof(char));
     if(result == NULL){
         perror(__func__);
-        exit(1);
+        exit(EXIT_FAILURE);
     }
 
     return result;
@@ -32,7 +32,7 @@ char* read_file(const char* filepath, size_t* result_size){
     int fd = open(filepath, O_RDONLY);
     if(fd == FILE_FAILURE){
         perror(__func__);
-        exit(EXIT_SUCCESS);
+        exit(EXIT_FAILURE);
     }
 
     // Resulting text
@@ -42,15 +42,15 @@ char* read_file(const char* filepath, size_t* result_size){
     size_t bytes_read;
     size_t curr_size;
     size_t total_bytes = 0;
-    char buffer[FILE__SIZE];
-    while((bytes_read = read(fd, buffer, FILE__SIZE)) > 0){
+    char buffer[FILE_SIZE];
+    while((bytes_read = read(fd, buffer, FILE_SIZE)) > 0){
 
         if(result == NULL){
             result = alloc();
             curr_size = 1;
         } else {
             curr_size++;
-            result =(char*) realloc(result, FILE__SIZE * curr_size * sizeof(char));
+            result =(char*) realloc(result, FILE_SIZE * curr_size * sizeof(char));
         }
 
         strncat(result, buffer, bytes_read);
@@ -94,21 +94,21 @@ size_t num_len(int num){
 }
 
 
-void save_id(char* filepath, int id){
-    size_t size = num_len(id) + 1;
+// void save_id(char* filepath, int id){
+//     size_t size = num_len(id) + 1;
 
-    char* id_str =(char*) malloc(size);
-    snprintf(id_str, size, "%d", id);
-    write_file(filepath, id_str);
+//     char* id_str =(char*) malloc(size);
+//     snprintf(id_str, size, "%d", id);
+//     write_file(filepath, id_str);
 
-    free(id_str), id_str = NULL;
-}
+//     free(id_str), id_str = NULL;
+// }
 
 
-int get_id(char* filepath){
-    char* id_str = read_file(filepath, NULL);
-    int id = atoi(id_str);
+// int get_id(char* filepath){
+//     char* id_str = read_file(filepath, NULL);
+//     int id = atoi(id_str);
 
-    free(id_str), id_str = NULL;
-    return id;
-}
+//     free(id_str), id_str = NULL;
+//     return id;
+// }

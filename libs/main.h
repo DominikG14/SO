@@ -1,0 +1,6 @@
+#include "main/bool.h"
+#include "main/config.h"
+#include "main/open.h"
+#include "main/close.h"
+#include "main/vars.h"
+#include "main/utils.h"
