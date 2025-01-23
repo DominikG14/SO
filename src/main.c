@@ -38,9 +38,11 @@ bool open_complex_time(){
     return !POOL_IS_OPEN && TIME_CURR >= COMPLEX_OPEN_TIME && TIME_CURR <= COMPLEX_CLOSE_TIME;
 }
 
+
 bool close_complex_time(){
     return POOL_IS_OPEN && TIME_CURR > COMPLEX_CLOSE_TIME;
 }
+
 
 bool complex_is_closed(){
     return TIME_CURR < COMPLEX_OPEN_TIME || TIME_CURR > COMPLEX_CLOSE_TIME;
@@ -122,7 +124,7 @@ void disp_time(int time){
     int hour = time / 60;
     int min = time % 60;
 
-    cyan();
+    bold_underline_cyan();
     printf("\n");
     if(hour < 10){
         printf("0");
@@ -132,8 +134,9 @@ void disp_time(int time){
     if(min < 10){
         printf("0");
     }
-    printf("%d\n", min);
+    printf("%d", min);
     reset();
+    printf("\n");
 }
 
 
@@ -241,6 +244,7 @@ void close_complex(){
 
 int main() {
     setup();
+
 
     pid_t pid;
 
