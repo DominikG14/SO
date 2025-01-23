@@ -23,6 +23,40 @@ Child  child;
 int CURRENT_POOL;
 
 
+double leisure_age_avg(LeisurePool* pool, int additional_age, int additional_size){
+    int age_sum = pool->age_sum + additional_age;
+    int size_sum = pool->size + additional_size;
+
+    double age_avg =(double) age_sum / size_sum;
+
+    return age_avg;
+}
+
+
+void disp_leisure_data(){
+    key_t key = get_key(POOL_LEISURE_KEY_ID);
+    int pool_shmid = access_shared_mem(key, POOL_SHARED_MEM_SIZE[LEISURE], 0600);
+    LeisurePool* pool =(LeisurePool*) get_shared_mem(pool_shmid);
+
+    // Pool size
+    printf_clr(cyan, "| ");
+    printf("size: %ld", pool->size);
+
+    // Pool age sum
+    printf_clr(cyan, " | ");
+    printf("age_sum: %ld", pool->age_sum);
+
+    // Pool age avg
+    printf_clr(cyan, " | ");
+    printf("age_avg: %lf", leisure_age_avg(pool, 0, 0));
+
+    // End
+    printf_clr(cyan, " |");
+
+    detach_shared_mem(pool);
+}
+
+
 bool client_is_underage(){
     return client.age < 18; 
 }
@@ -322,7 +356,7 @@ void join_paddling_pool(){
         while(true){
             status = USoperate_sem(pool_semid, SEM_POOL_ENTER, SEM_WAIT);
 
-            if(USget_sem_value(pool_semid, SEM_CASH_STATUS)){
+            if(USget_sem_value(pool_semid, SEM_POOL_STATUS)){
                 child.SWIM_IN_POOL = false;
                 child.WAIT_IN_CASH = false;
                 
@@ -380,7 +414,132 @@ void join_paddling_pool(){
 
 
 void join_leisure_pool(){
-    while(true);
+    bool WAIT_IN_QUEUE = true;
+    CURRENT_POOL = LEISURE;
+
+    key_t key = get_key(POOL_LEISURE_KEY_ID);
+
+    int pool_semid = access_sem(key, SEM_POOL_NUM, 0600);
+
+    int pool_shmid = access_shared_mem(key, POOL_SHARED_MEM_SIZE[LEISURE], 0600);
+    LeisurePool* pool =(LeisurePool*) get_shared_mem(pool_shmid);
+
+
+    if(client_has_child()){
+        if(pool->size < POOL_SIZE[LEISURE] - 1 && leisure_age_avg(pool, client.age + child.age, 2) <= POOL_LEISURE_AGE_AVG){
+            WAIT_IN_QUEUE = false;
+            pool->size += 2;
+            pool->age_sum += client.age + child.age;
+            detach_shared_mem(pool);
+        }
+    } else if(pool->size < POOL_SIZE[LEISURE] && leisure_age_avg(pool, client.age, 1) <= POOL_LEISURE_AGE_AVG){
+            WAIT_IN_QUEUE = false;
+            pool->size += 1;
+            pool->age_sum += client.age;
+            detach_shared_mem(pool);
+    }
+
+    if(WAIT_IN_QUEUE){
+
+        log_console_with_data(getpid(),
+            WHO__CLIENT,
+            ACTION__ENTERED,
+            LOCATION__LEISURE_QUEUE,
+            REASON__NONE,
+            disp_leisure_data
+        );
+
+        int status;
+        while(true){
+            status = USoperate_sem(pool_semid, SEM_POOL_ENTER, SEM_WAIT);
+
+            if(USget_sem_value(pool_semid, SEM_POOL_STATUS)){
+                log_console_with_data(getpid(),
+                    WHO__CLIENT,
+                    ACTION__LEFT,
+                    LOCATION__LEISURE_QUEUE,
+                    REASON__COMPLEX_CLOSED,
+                    disp_leisure_data
+                );
+
+                exit(EXIT_SUCCESS);
+            }
+
+            if(status == SEM_SUCCESS){
+                pool =(LeisurePool*) get_shared_mem(pool_shmid);
+
+                if(client_has_child()){
+                    if(pool->size < POOL_SIZE[LEISURE] - 1 && leisure_age_avg(pool, client.age + child.age, 2) <= POOL_LEISURE_AGE_AVG){
+                        WAIT_IN_QUEUE = false;
+                        pool->size += 2;
+                        pool->age_sum += client.age + child.age;
+                        detach_shared_mem(pool);
+                        break;
+                    } 
+                } else if(pool->size < POOL_SIZE[LEISURE] && leisure_age_avg(pool, client.age, 1) <= POOL_LEISURE_AGE_AVG){
+                    WAIT_IN_QUEUE = false;
+                    pool->size += 1;
+                    pool->age_sum += client.age;
+                    detach_shared_mem(pool);
+                    break;
+                } else {
+                    detach_shared_mem(pool);
+                    continue;
+                }
+
+
+                log_console_with_data(getpid(),
+                    WHO__CLIENT,
+                    ACTION__LEFT,
+                    LOCATION__LEISURE_QUEUE,
+                    REASON__NONE,
+                    disp_leisure_data
+                ); 
+
+                break;
+            }
+
+            perror(__func__);
+            exit(EXIT_FAILURE);
+        }
+    }
+
+    log_console_with_data(getpid(),
+        WHO__CLIENT,
+        ACTION__ENTERED,
+        LOCATION__LEISURE_POOL,
+        REASON__NONE,
+        disp_leisure_data
+    );
+
+    
+    sleep(rand_swim_time());
+    pool =(LeisurePool*) get_shared_mem(pool_shmid);
+    if(client_has_child()){
+        pool->size -= 2;
+        pool->age_sum -= client.age + child.age;
+        detach_shared_mem(pool);
+    } else {
+        pool->size -= 1;
+        pool->age_sum -= client.age;
+        detach_shared_mem(pool);
+    }
+
+    log_console_with_data(getpid(),
+        WHO__CLIENT,
+        ACTION__LEFT,
+        LOCATION__LEISURE_POOL,
+        REASON__END_OF_SWIM_TIME,
+        disp_leisure_data
+    );
+
+    if(client_has_child()){
+        operate_sem(pool_semid, SEM_POOL_ENTER, SEM_SIGNAL);
+        sleep(1);
+    }
+    operate_sem(pool_semid, SEM_POOL_ENTER, SEM_SIGNAL);
+
+    client_leave_complex();
 }
 
 
@@ -416,7 +575,7 @@ void join_olimpic_pool(){
         while(true){
             status = USoperate_sem(pool_semid, SEM_POOL_ENTER, SEM_WAIT);
 
-            if(USget_sem_value(pool_semid, SEM_CASH_STATUS)){
+            if(USget_sem_value(pool_semid, SEM_POOL_STATUS)){
                 log_console(getpid(),
                     WHO__CLIENT,
                     ACTION__LEFT,
@@ -477,15 +636,14 @@ void choose_pool(){
         join_leisure_pool();
     }
 
-    join_olimpic_pool();
 
-    // switch(rand_int(OLIMPIC, LEISURE)){
-    //     case OLIMPIC:
-    //         join_olimpic_pool();
+    switch(rand_int(OLIMPIC, LEISURE)){
+        case OLIMPIC:
+            join_olimpic_pool();
 
-    //     case LEISURE:
-    //         join_leisure_pool();
-    // }
+        case LEISURE:
+            join_leisure_pool();
+    }
 }
 
 

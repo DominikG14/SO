@@ -1,6 +1,9 @@
 #pragma once
 
 
+int POOL_LEISURE_AGE_AVG = 30;
+
+
 enum POOL__TYPES {
     OLIMPIC,
     LEISURE,

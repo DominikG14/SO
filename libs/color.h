@@ -26,6 +26,10 @@ void bright_cyan()    { printf("\033[96m"); }
 void bright_white()   { printf("\033[97m"); }
 
 
+// special
+
+
+
 // Reset to default font color
 void reset() { printf("\033[0m"); }
 
