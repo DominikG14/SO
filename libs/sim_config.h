@@ -33,8 +33,7 @@ enum SIM_CONFIG_VARS {
     // Cashier
     CASHIER__MIN_PAYMENT_TIME,
     CASHIER__MAX_PAYMENT_TIME,
-
-
+    
     SIM_CONFIG_SIZE,
 };
 

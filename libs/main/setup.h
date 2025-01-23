@@ -17,11 +17,6 @@ void __set_main_logger(){
 }
 
 
-void __delete_main_logger(){
-    delete_msq(LOGGER_MSQID);
-}
-
-
 void __load_config(){
     load_config();
 
@@ -84,7 +79,6 @@ void __create_pool_resources(int pool_num){
 
 void setup(){
     __load_config();
-    __set_main_logger();
     __create_tmp_dir();
     signal(SIGUSR1, SIG_IGN); // Signal init
     __create_pool_resources(OLIMPIC);
@@ -97,5 +91,4 @@ void clean_up(){
     __delete_pool_resources(OLIMPIC);
     __delete_pool_resources(LEISURE);
     __delete_pool_resources(PADDLING);
-    __delete_main_logger();
 }

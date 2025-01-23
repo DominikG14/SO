@@ -23,7 +23,7 @@ void __log_console(int ID, int WHO, int ACTION, int LOCATION, int REASON){
         return;
     }
 
-    printf_clr(REASON_CLR[REASON], "%s", REASON_NAME[REASON]);
+    printf_clr(REASON_CLR[REASON], "%-20s", REASON_NAME[REASON]);
 }
 
 
@@ -37,15 +37,4 @@ void log_console_with_data(int ID, int WHO, int ACTION, int LOCATION, int REASON
     __log_console(ID, WHO, ACTION, LOCATION, REASON);
     data();
     printf("\n");
-}
-
-
-void logger(int ID, int WHO, int ACTION, int LOCATION, int REASON){
-    key_t key = get_key(LOGGING_KEY_ID);
-    int msqid = access_msq(key, 0200);
-
-    char buffer[100];
-    sprintf(buffer, "%d,%d,%d,%d,%d", ID, WHO, ACTION, LOCATION, REASON);
-
-    send_msq(msqid, buffer, 1);
 }

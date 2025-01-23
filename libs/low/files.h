@@ -72,7 +72,7 @@ char* read_file(const char* filepath, size_t* result_size){
 
 
 void write_file(char* filepath, char* text){
-    int fd = open(filepath, O_CREAT|O_WRONLY|O_TRUNC, 0600);
+    int fd = open(filepath, O_CREAT|O_WRONLY, 0600);
     if(fd == FILE_FAILURE){
         perror(__func__);
         exit(EXIT_FAILURE);
@@ -83,32 +83,13 @@ void write_file(char* filepath, char* text){
 }
 
 
-size_t num_len(int num){
-    size_t len = 0;
-    while(num > 0){
-        len++;
-        num /= 10;
+void append_file(char* filepath, char* text){
+    int fd = open(filepath, O_CREAT|O_WRONLY|O_APPEND, 0600);
+    if(fd == FILE_FAILURE){
+        perror(__func__);
+        exit(EXIT_FAILURE);
     }
 
-    return len;
+    write(fd, text, strlen(text));
+    close(fd);
 }
-
-
-// void save_id(char* filepath, int id){
-//     size_t size = num_len(id) + 1;
-
-//     char* id_str =(char*) malloc(size);
-//     snprintf(id_str, size, "%d", id);
-//     write_file(filepath, id_str);
-
-//     free(id_str), id_str = NULL;
-// }
-
-
-// int get_id(char* filepath){
-//     char* id_str = read_file(filepath, NULL);
-//     int id = atoi(id_str);
-
-//     free(id_str), id_str = NULL;
-//     return id;
-// }
