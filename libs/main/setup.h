@@ -5,9 +5,21 @@
 
 #include "low.h"
 
+#include "keys_id.h"
 #include "sim_config.h"
 #include "pool.h"
 #include "vars.h"
+
+
+void __set_main_logger(){
+    key_t key = get_key(LOGGING_KEY_ID);
+    LOGGER_MSQID = access_msq(key, IPC_CREAT|0600);
+}
+
+
+void __delete_main_logger(){
+    delete_msq(LOGGER_MSQID);
+}
 
 
 void __load_config(){
@@ -72,6 +84,7 @@ void __create_pool_resources(int pool_num){
 
 void setup(){
     __load_config();
+    __set_main_logger();
     __create_tmp_dir();
     signal(SIGUSR1, SIG_IGN); // Signal init
     __create_pool_resources(OLIMPIC);
@@ -84,4 +97,5 @@ void clean_up(){
     __delete_pool_resources(OLIMPIC);
     __delete_pool_resources(LEISURE);
     __delete_pool_resources(PADDLING);
+    __delete_main_logger();
 }

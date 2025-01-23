@@ -14,3 +14,4 @@ int CLIENT_SPAWN_PERC;
 // Local
 int TIME_CURR;
 bool COMPLEX_IS_OPEN;
+int LOGGER_MSQID;

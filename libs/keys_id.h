@@ -6,6 +6,7 @@ enum KEYS {
     POOL_LEISURE_KEY_ID,
     POOL_PADDLING_KEY_ID,
     CASH_KEY_ID,
+    LOGGING_KEY_ID,
 };
 
 

@@ -1,6 +1,10 @@
 #pragma once
 
 #include <stdio.h>
+#include <string.h>
+
+#include "keys_id.h"
+#include "low.h"
 
 #include "logging/WHO.h"
 #include "logging/ACTION.h"
@@ -33,4 +37,15 @@ void log_console_with_data(int ID, int WHO, int ACTION, int LOCATION, int REASON
     __log_console(ID, WHO, ACTION, LOCATION, REASON);
     data();
     printf("\n");
+}
+
+
+void logger(int ID, int WHO, int ACTION, int LOCATION, int REASON){
+    key_t key = get_key(LOGGING_KEY_ID);
+    int msqid = access_msq(key, 0200);
+
+    char buffer[100];
+    sprintf(buffer, "%d,%d,%d,%d,%d", ID, WHO, ACTION, LOCATION, REASON);
+
+    send_msq(msqid, buffer, 1);
 }
