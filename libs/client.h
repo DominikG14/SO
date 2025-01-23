@@ -11,3 +11,4 @@
 #include "client/spawn.h"
 #include "client/struct.h"
 #include "client/vars.h"
+#include "client/logs.h"

@@ -10,6 +10,11 @@
 #include "low.h"
 #include "leave.h"
 #include "keys_id.h"
+#include "logs.h"
+
+
+int POOL_SHMID;
+int POOL_SEMID;
 
 
 void join_paddling_pool(){
@@ -174,9 +179,26 @@ void join_leisure_pool(){
                         pool->size += 2;
                         pool->age_sum += client.age + child.age;
                         detach_shared_mem(pool);
+
+                        log_console_with_data(getpid(),
+                            WHO__CLIENT,
+                            ACTION__ENTERED,
+                            LOCATION__LEISURE_POOL,
+                            REASON__NONE,
+                            disp_leisure_data
+                        );
+
                         break;
                     } 
                 } else if(pool->size < POOL_SIZE[LEISURE] && leisure_age_avg(pool, client.age, 1) <= POOL_LEISURE_AGE_AVG){
+                    log_console_with_data(getpid(),
+                        WHO__CLIENT,
+                        ACTION__ENTERED,
+                        LOCATION__LEISURE_POOL,
+                        REASON__NONE,
+                        disp_leisure_data
+                    );
+
                     WAIT_IN_QUEUE = false;
                     pool->size += 1;
                     pool->age_sum += client.age;
@@ -194,7 +216,7 @@ void join_leisure_pool(){
                     LOCATION__LEISURE_QUEUE,
                     REASON__NONE,
                     disp_leisure_data
-                ); 
+                );
 
                 break;
             }
@@ -203,14 +225,6 @@ void join_leisure_pool(){
             exit(EXIT_FAILURE);
         }
     }
-
-    log_console_with_data(getpid(),
-        WHO__CLIENT,
-        ACTION__ENTERED,
-        LOCATION__LEISURE_POOL,
-        REASON__NONE,
-        disp_leisure_data
-    );
 
     
     sleep(rand_swim_time());
@@ -243,61 +257,67 @@ void join_leisure_pool(){
 }
 
 
-void join_olimpic_pool(){
-    bool WAIT_IN_QUEUE = true;
+void olimpic_enter_pool(){
+    OlimpicPool* pool =(OlimpicPool*) get_shared_mem(POOL_SHMID);
+    pool->size += 1;
+    detach_shared_mem(pool);
+}
+
+bool olimpic_space_available(){
+    OlimpicPool* pool =(OlimpicPool*) get_shared_mem(POOL_SHMID);
+    int cur_size = pool->size;
+    detach_shared_mem(pool);
+    return cur_size < POOL_SIZE[CURRENT_POOL];
+}
+
+void olimpic_set_as_cur_pool(){
     CURRENT_POOL = OLIMPIC;
 
-    key_t key = get_key(POOL_OLIMPIC_KEY_ID);
+    // Generate access to pool resources
+    key_t key  = get_key(POOL_OLIMPIC_KEY_ID);
+    POOL_SEMID = access_sem(key, SEM_POOL_NUM, 0600);
+    POOL_SHMID = access_shared_mem(key, POOL_SHARED_MEM_SIZE[CURRENT_POOL], 0600);
+}
 
-    int pool_semid = access_sem(key, SEM_POOL_NUM, 0600);
 
-    int pool_shmid = access_shared_mem(key, POOL_SHARED_MEM_SIZE[OLIMPIC], 0600);
-    OlimpicPool* pool =(OlimpicPool*) get_shared_mem(pool_shmid);
+void olimpic_leave_pool(){
+    OlimpicPool* pool =(OlimpicPool*) get_shared_mem(POOL_SHMID);
+    pool->size -= 1;
+    detach_shared_mem(pool);
+}
 
 
-    if(pool->size  < POOL_SIZE[OLIMPIC]){
-        WAIT_IN_QUEUE = false;
-        pool->size += 1;
-        detach_shared_mem(pool);
+void join_olimpic_pool(){
+    olimpic_set_as_cur_pool();
+
+    // check if pool have enough size
+    if(olimpic_space_available()){
+        olimpic_enter_pool();
+        LOG_olimpic_enter_pool();
     }
-
-
-    if(WAIT_IN_QUEUE){
-
-        log_console_with_data(getpid(),
-            WHO__CLIENT,
-            ACTION__ENTERED,
-            LOCATION__OLIMPIC_QUEUE,
-            REASON__NONE,
-            disp_olimpic_data
-        );
+    else {
+        LOG_olimpic_enter_queue();
 
         int status;
         while(true){
-            status = USoperate_sem(pool_semid, SEM_POOL_ENTER, SEM_WAIT);
+            status = USoperate_sem(POOL_SEMID, SEM_POOL_ENTER, SEM_WAIT);
 
-            if(USget_sem_value(pool_semid, SEM_POOL_STATUS)){
-                log_console_with_data(getpid(),
-                    WHO__CLIENT,
-                    ACTION__LEFT,
-                    LOCATION__OLIMPIC_QUEUE,
-                    REASON__COMPLEX_CLOSED,
-                    disp_olimpic_data
-                );
+            // if(USget_sem_value(pool_semid, SEM_POOL_STATUS)){
+            //     log_console_with_data(getpid(),
+            //         WHO__CLIENT,
+            //         ACTION__LEFT,
+            //         LOCATION__OLIMPIC_QUEUE,
+            //         REASON__COMPLEX_CLOSED,
+            //         disp_olimpic_data
+            //     );
 
-                exit(EXIT_SUCCESS);
-            }
+            //     exit(EXIT_SUCCESS);
+            // }
 
             if(status == SEM_SUCCESS){
-                
-                log_console_with_data(getpid(),
-                    WHO__CLIENT,
-                    ACTION__LEFT,
-                    LOCATION__OLIMPIC_QUEUE,
-                    REASON__NONE,
-                    disp_olimpic_data
-                ); 
-
+                LOG_olimpic_leave_queue();
+                LOG_olimpic_enter_pool();
+                olimpic_enter_pool();
                 break;
             }
 
@@ -306,29 +326,19 @@ void join_olimpic_pool(){
         }
     }
 
-    log_console_with_data(getpid(),
-        WHO__CLIENT,
-        ACTION__ENTERED,
-        LOCATION__OLIMPIC_POOL,
-        REASON__NONE,
-        disp_olimpic_data
-    );
-
     sleep(rand_swim_time());
-    pool =(OlimpicPool*) get_shared_mem(pool_shmid);
-    pool->size -= 1;
-    detach_shared_mem(pool);
+    olimpic_leave_pool();
+    LOG_olimpic_leave_pool();
+    operate_sem(POOL_SEMID, SEM_POOL_ENTER, SEM_SIGNAL);
 
-    log_console_with_data(getpid(),
+    log_console(getpid(),
         WHO__CLIENT,
         ACTION__LEFT,
-        LOCATION__OLIMPIC_POOL,
-        REASON__END_OF_SWIM_TIME,
-        disp_olimpic_data
+        LOCATION__POOL_COMPLEX,
+        REASON__END_OF_SWIM_TIME
     );
 
-    operate_sem(pool_semid, SEM_POOL_ENTER, SEM_SIGNAL);
-    client_leave_complex();
+    exit(EXIT_SUCCESS);
 }
 
 

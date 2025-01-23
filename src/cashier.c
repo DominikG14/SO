@@ -94,7 +94,7 @@ int main(){
     int payment_time;
     int payment_status;
     while(true){
-        payment_time = rand_int(1, 3);
+        payment_time = rand_int(0, 1);
         sleep(payment_time);
 
         next_client();

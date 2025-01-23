@@ -33,13 +33,21 @@ enum SIM_CONFIG_VARS {
     // Cashier
     CASHIER__MIN_PAYMENT_TIME,
     CASHIER__MAX_PAYMENT_TIME,
+
+    // Pools
+    POOL__OLIMPIC_MAX_SIZE,
+    POOL__LEISURE_MAX_SIZE,
+    POOL__PADDLING_MAX_SIZE,
+
+    // Leisure avg
+    POOL__LEISURE_AGE_AVG,
     
     SIM_CONFIG_SIZE,
 };
 
 
 int SIM_CONFIG[SIM_CONFIG_SIZE];
-char* SIM_CONFIG_FILEPATH = "./config/config";
+char* SIM_CONFIG_FILEPATH = "./config/olimpic";
 
 
 // Loads simulation configuration from 'SIM_CONFIG_FILEPATH' into local 'SIM_CONFIG' array
