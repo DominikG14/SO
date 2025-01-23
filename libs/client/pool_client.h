@@ -13,10 +13,6 @@
 #include "logs.h"
 
 
-int POOL_SHMID;
-int POOL_SEMID;
-
-
 void join_paddling_pool(){
     bool WAIT_IN_QUEUE = true;
     CURRENT_POOL = PADDLING;
@@ -302,7 +298,7 @@ void join_olimpic_pool(){
         while(true){
             status = USoperate_sem(POOL_SEMID, SEM_POOL_ENTER, SEM_WAIT);
 
-            // if(USget_sem_value(pool_semid, SEM_POOL_STATUS)){
+            // if(USget_sem_value(POOL_SEMID, SEM_POOL_STATUS)){
             //     log_console_with_data(getpid(),
             //         WHO__CLIENT,
             //         ACTION__LEFT,
@@ -316,8 +312,8 @@ void join_olimpic_pool(){
 
             if(status == SEM_SUCCESS){
                 LOG_olimpic_leave_queue();
-                LOG_olimpic_enter_pool();
                 olimpic_enter_pool();
+                LOG_olimpic_enter_pool();
                 break;
             }
 

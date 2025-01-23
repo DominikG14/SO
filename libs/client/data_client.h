@@ -6,9 +6,15 @@
 #include "color.h"
 
 
-char* STATUS_NEW = "new";
-char* STATUS_PREV = "prev";
-char* STATUS_NONE = "";
+enum {
+    STATUS_ENTER,
+    STATUS_LEAVE,
+    STATUS_NONE,
+};
+
+
+int POOL_SHMID;
+int POOL_SEMID;
 
 
 double leisure_age_avg(LeisurePool* pool, int additional_age, int additional_size){
@@ -53,28 +59,31 @@ void disp_leisure_data(){
 }
 
 
-void disp_olimpic_data(char* status){
-    key_t key = get_key(POOL_OLIMPIC_KEY_ID);
-    int pool_shmid = access_shared_mem(key, POOL_SHARED_MEM_SIZE[OLIMPIC], 0600);
-    OlimpicPool* pool =(OlimpicPool*) get_shared_mem(pool_shmid);
+void disp_olimpic_data(int status){
+    OlimpicPool* pool =(OlimpicPool*) get_shared_mem(POOL_SHMID);
+
+    // Client age
+    printf_clr(cyan, "| ");
+    printf("client_age: %d", client.age);
 
     // Pool size
-    if(strcmp(status, STATUS_NONE) == 0){
-        printf("size: %d/%d", pool->size, POOL_SIZE[OLIMPIC]);
-    }
-    else{
-        int num;
-        if(strcmp(status, STATUS_NEW) == 0) num = 1;
-        else num = -1;
+    printf_clr(cyan, " | ");
+    switch(status){
+        case STATUS_ENTER:
+            printf("size: %d/%d (prev: %d/%d)", pool->size, POOL_SIZE[OLIMPIC], pool->size - 1, POOL_SIZE[OLIMPIC]);
+            break;
 
-        printf_clr(cyan, "| ");
-        printf("size: %d/%d (%s: %d/%d)", pool->size, POOL_SIZE[OLIMPIC], status, pool->size + num, POOL_SIZE[OLIMPIC]);
+        case STATUS_LEAVE:
+            printf("size: %d/%d (prev: %d/%d)", pool->size, POOL_SIZE[OLIMPIC], pool->size + 1, POOL_SIZE[OLIMPIC]);
+            break;
+
+        case STATUS_NONE:
+            printf("size: %d/%d", pool->size, POOL_SIZE[OLIMPIC]);
     }
-    
+
 
     // End
     printf_clr(cyan, " |");
-
     detach_shared_mem(pool);
 }
 
