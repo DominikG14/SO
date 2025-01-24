@@ -21,8 +21,8 @@ int CHILD_BABY_AGE;
 int POOL_LEISURE_AGE_AVG;
 int POOL_SIZE[3];
 
+int CLIENT_LOCATION;
 
 // Local
 Client client;
 Child  child;
-int CURRENT_POOL;

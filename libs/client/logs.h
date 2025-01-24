@@ -13,3 +13,13 @@ void log_pool_data(int ID, int WHO, int ACTION, int LOCATION, int REASON, char* 
 
     free(return_data), return_data = NULL;
 }
+
+
+void LOG_leave_complex(){
+    log_console(getpid(),
+        WHO__CLIENT,
+        ACTION__LEFT,
+        LOCATION__POOL_COMPLEX,
+        REASON__END_OF_SWIM_TIME
+    );
+}

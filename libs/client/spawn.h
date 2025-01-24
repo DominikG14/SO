@@ -30,7 +30,7 @@ void* spawn_child(){
     log_console(getpid(),
         WHO__CHILD,
         ACTION__LEFT,
-        CURRENT_POOL,
+        CLIENT_LOCATION,
         REASON__END_OF_SWIM_TIME
     );
     child_leave_complex();

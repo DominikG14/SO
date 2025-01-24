@@ -8,7 +8,7 @@ void child_leave_complex(){
     log_console(getpid(),
         WHO__CHILD,
         ACTION__LEFT,
-        CURRENT_POOL,
+        LOCATION__POOL_COMPLEX,
         REASON__COMPLEX_CLOSED
     );
 
@@ -26,7 +26,14 @@ void client_leave_complex(){
     log_console(getpid(),
         WHO__CLIENT,
         ACTION__LEFT,
-        CURRENT_POOL,
+        CLIENT_LOCATION,
+        REASON__COMPLEX_CLOSED
+    );
+
+    log_console(getpid(),
+        WHO__CLIENT,
+        ACTION__LEFT,
+        LOCATION__POOL_COMPLEX,
         REASON__COMPLEX_CLOSED
     );
 

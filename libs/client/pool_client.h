@@ -13,75 +13,29 @@
 #include "logs.h"
 
 #include "olimpic/func.h"
+#include "paddling/func.h"
+
 
 
 void join_paddling_pool(){
-    bool WAIT_IN_QUEUE = true;
-    CURRENT_POOL = PADDLING;
+    paddling_set_as_cur_pool();
 
-    key_t key = get_key(POOL_PADDLING_KEY_ID);
-
-    int pool_semid = access_sem(key, SEM_POOL_NUM, 0600);
-
-    int pool_shmid = access_shared_mem(key, POOL_SHARED_MEM_SIZE[PADDLING], 0600);
-    PaddlingPool* pool =(PaddlingPool*) get_shared_mem(pool_shmid);
-
-
-    if(pool->size / 2 < POOL_SIZE[PADDLING] / 2){
-        WAIT_IN_QUEUE = false;
-        pool->size += 2;
-        detach_shared_mem(pool);
+    if(paddling_space_available()){
+        paddling_enter_pool();
+        LOG_paddling_enter_pool();
     }
-
-
-    if(WAIT_IN_QUEUE){
-
-        log_console_with_data(getpid(),
-            WHO__CLIENT,
-            ACTION__ENTERED,
-            LOCATION__PADDLING_QUEUE,
-            REASON__NONE,
-            disp_paddling_data
-        );
-        log_console_with_data(getpid(),
-            WHO__CHILD,
-            ACTION__ENTERED,
-            LOCATION__PADDLING_QUEUE,
-            REASON__NONE,
-            disp_paddling_data
-        );
+    else{
+        CLIENT_LOCATION = LOCATION__PADDLING_QUEUE;
+        LOG_paddling_enter_queue();
 
         int status;
         while(true){
-            status = USoperate_sem(pool_semid, SEM_POOL_ENTER, SEM_WAIT);
-
-            if(USget_sem_value(pool_semid, SEM_POOL_STATUS)){
-                child.SWIM_IN_POOL = false;
-                child.WAIT_IN_CASH = false;
-                
-                pthread_join(child.tid, NULL);
-
-                log_console_with_data(getpid(),
-                    WHO__CLIENT,
-                    ACTION__LEFT,
-                    LOCATION__PADDLING_QUEUE,
-                    REASON__COMPLEX_CLOSED,
-                    disp_paddling_data
-                );
-
-                exit(EXIT_SUCCESS);
-            }
+            status = USoperate_sem(POOL_SEMID, SEM_POOL_ENTER, SEM_WAIT);
 
             if(status == SEM_SUCCESS){
-                
-                log_console_with_data(getpid(),
-                    WHO__CLIENT,
-                    ACTION__LEFT,
-                    LOCATION__PADDLING_QUEUE,
-                    REASON__NONE,
-                    disp_paddling_data
-                ); 
-
+                LOG_paddling_leave_queue();
+                paddling_enter_pool();
+                LOG_paddling_enter_pool();
                 break;
             }
 
@@ -90,42 +44,26 @@ void join_paddling_pool(){
         }
     }
 
-    log_console_with_data(getpid(),
-        WHO__CLIENT,
-        ACTION__ENTERED,
-        LOCATION__PADDLING_POOL,
-        REASON__NONE,
-        disp_paddling_data
-    );
-
     sleep(rand_swim_time());
-    pool =(PaddlingPool*) get_shared_mem(pool_shmid);
-    pool->size -= 2;
-    detach_shared_mem(pool);
+    paddling_leave_pool();
+    LOG_olimpic_leave_pool();
+    child.SWIM_IN_POOL = false;
+    pthread_join(child.tid, NULL);
 
-    log_console_with_data(getpid(),
-        WHO__CLIENT,
-        ACTION__LEFT,
-        LOCATION__PADDLING_POOL,
-        REASON__END_OF_SWIM_TIME,
-        disp_paddling_data
-    );
-
-    operate_sem(pool_semid, SEM_POOL_ENTER, SEM_SIGNAL);
+    operate_sem(POOL_SEMID, SEM_POOL_ENTER, SEM_SIGNAL);
     client_leave_complex();
 }
 
 
 void join_leisure_pool(){
     bool WAIT_IN_QUEUE = true;
-    CURRENT_POOL = LEISURE;
 
     key_t key = get_key(POOL_LEISURE_KEY_ID);
 
-    int pool_semid = access_sem(key, SEM_POOL_NUM, 0600);
+    int POOL_SEMID = access_sem(key, SEM_POOL_NUM, 0600);
 
-    int pool_shmid = access_shared_mem(key, POOL_SHARED_MEM_SIZE[LEISURE], 0600);
-    LeisurePool* pool =(LeisurePool*) get_shared_mem(pool_shmid);
+    int POOL_SHMID = access_shared_mem(key, POOL_SHARED_MEM_SIZE[LEISURE], 0600);
+    LeisurePool* pool =(LeisurePool*) get_shared_mem(POOL_SHMID);
 
 
     if(client_has_child()){
@@ -154,9 +92,9 @@ void join_leisure_pool(){
 
         int status;
         while(true){
-            status = USoperate_sem(pool_semid, SEM_POOL_ENTER, SEM_WAIT);
+            status = USoperate_sem(POOL_SEMID, SEM_POOL_ENTER, SEM_WAIT);
 
-            if(USget_sem_value(pool_semid, SEM_POOL_STATUS)){
+            if(USget_sem_value(POOL_SEMID, SEM_POOL_STATUS)){
                 log_console_with_data(getpid(),
                     WHO__CLIENT,
                     ACTION__LEFT,
@@ -169,7 +107,7 @@ void join_leisure_pool(){
             }
 
             if(status == SEM_SUCCESS){
-                pool =(LeisurePool*) get_shared_mem(pool_shmid);
+                pool =(LeisurePool*) get_shared_mem(POOL_SHMID);
 
                 if(client_has_child()){
                     if(pool->size < POOL_SIZE[LEISURE] - 1 && leisure_age_avg(pool, client.age + child.age, 2) <= POOL_LEISURE_AGE_AVG){
@@ -226,7 +164,7 @@ void join_leisure_pool(){
 
     
     sleep(rand_swim_time());
-    pool =(LeisurePool*) get_shared_mem(pool_shmid);
+    pool =(LeisurePool*) get_shared_mem(POOL_SHMID);
     if(client_has_child()){
         pool->size -= 2;
         pool->age_sum -= client.age + child.age;
@@ -246,10 +184,10 @@ void join_leisure_pool(){
     );
 
     if(client_has_child()){
-        operate_sem(pool_semid, SEM_POOL_ENTER, SEM_SIGNAL);
+        operate_sem(POOL_SEMID, SEM_POOL_ENTER, SEM_SIGNAL);
         sleep(1);
     }
-    operate_sem(pool_semid, SEM_POOL_ENTER, SEM_SIGNAL);
+    operate_sem(POOL_SEMID, SEM_POOL_ENTER, SEM_SIGNAL);
 
     client_leave_complex();
 }
@@ -258,28 +196,17 @@ void join_leisure_pool(){
 void join_olimpic_pool(){
     olimpic_set_as_cur_pool();
 
-    // check if pool have enough size
     if(olimpic_space_available()){
         olimpic_enter_pool();
         LOG_olimpic_enter_pool();
     }
     else {
+        CLIENT_LOCATION = LOCATION__OLIMPIC_QUEUE;
         LOG_olimpic_enter_queue();
 
         int status;
         while(true){
             status = USoperate_sem(POOL_SEMID, SEM_POOL_ENTER, SEM_WAIT);
-
-            if(USget_sem_value(POOL_SEMID, SEM_POOL_STATUS)){
-                log_console(getpid(),
-                    WHO__CLIENT,
-                    ACTION__LEFT,
-                    LOCATION__OLIMPIC_QUEUE,
-                    REASON__COMPLEX_CLOSED
-                );
-
-                exit(EXIT_SUCCESS);
-            }
 
             if(status == SEM_SUCCESS){
                 LOG_olimpic_leave_queue();
@@ -298,12 +225,7 @@ void join_olimpic_pool(){
     LOG_olimpic_leave_pool();
     operate_sem(POOL_SEMID, SEM_POOL_ENTER, SEM_SIGNAL);
 
-    log_console(getpid(),
-        WHO__CLIENT,
-        ACTION__LEFT,
-        LOCATION__POOL_COMPLEX,
-        REASON__END_OF_SWIM_TIME
-    );
+    LOG_leave_complex();
 
     exit(EXIT_SUCCESS);
 }

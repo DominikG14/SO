@@ -104,19 +104,49 @@ char* olimpic_data(int status){
 }
 
 
-void disp_paddling_data(){
+char* paddling_data(int status){
     key_t key = get_key(POOL_PADDLING_KEY_ID);
     int pool_shmid = access_shared_mem(key, POOL_SHARED_MEM_SIZE[PADDLING], 0600);
     PaddlingPool* pool =(PaddlingPool*) get_shared_mem(pool_shmid);
 
-    // Pool size
+    // Child age
     printf_clr(cyan, "| ");
-    printf("size: %d/%d (new: %d/%d)", pool->size, POOL_SIZE[PADDLING], pool->size + 2, POOL_SIZE[PADDLING]);
+    printf("child_age: %d", child.age);
+    printf_clr(cyan, " | ");
 
-    // End
+    // size
+    switch(status){
+        case STATUS_ENTER:
+            printf("size: %d/%d (prev: %d/%d)", pool->size, POOL_SIZE[PADDLING], pool->size - 2, POOL_SIZE[PADDLING]);
+            break;
+
+        case STATUS_LEAVE:
+            printf("size: %d/%d (prev: %d/%d)", pool->size, POOL_SIZE[PADDLING], pool->size + 2, POOL_SIZE[PADDLING]);
+            break;
+
+        case STATUS_NONE:
+            printf("size: %d/%d", pool->size, POOL_SIZE[PADDLING]);
+    }
     printf_clr(cyan, " |");
 
+
+    // log to file
+    char* data =(char*) malloc(4096);
+    switch(status){
+        case STATUS_ENTER:
+            sprintf(data, "| child_age: %d | size: %d/%d (prev: %d/%d) |", child.age, pool->size, POOL_SIZE[PADDLING], pool->size - 2, POOL_SIZE[PADDLING]);
+            break;
+
+        case STATUS_LEAVE:
+            sprintf(data, "| child_age: %d | size: %d/%d (prev: %d/%d) |", child.age, pool->size, POOL_SIZE[PADDLING], pool->size + 2, POOL_SIZE[PADDLING]);
+            break;
+
+        case STATUS_NONE:
+            sprintf(data, "| child_age: %d | size: %d/%d |", child.age, pool->size, POOL_SIZE[PADDLING]);
+    }
+
     detach_shared_mem(pool);
+    return data;
 }
 
 
