@@ -14,6 +14,7 @@
 
 #include "olimpic/func.h"
 #include "paddling/func.h"
+#include "leisure/func.h"
 
 
 
@@ -56,103 +57,42 @@ void join_paddling_pool(){
 
 
 void join_leisure_pool(){
+    leisure_set_as_cur_pool();
 
-
-    key_t key = get_key(POOL_LEISURE_KEY_ID);
-    POOL_SEMID = access_sem(key, SEM_POOL_NUM, 0600);
-    POOL_SHMID = access_shared_mem(key, POOL_SHARED_MEM_SIZE[LEISURE], 0600);
-    LeisurePool* pool =(LeisurePool*) get_shared_mem(POOL_SHMID);
-
-
-    if(client_has_child()){
-        if(pool->size < POOL_SIZE[LEISURE] - 1 && leisure_age_avg(pool, client.age + child.age, 2) <= POOL_LEISURE_AGE_AVG){
-            WAIT_IN_QUEUE = false;
-            pool->size += 2;
-            pool->age_sum += client.age + child.age;
-            detach_shared_mem(pool);
-        }
-    } else if(pool->size < POOL_SIZE[LEISURE] && leisure_age_avg(pool, client.age, 1) <= POOL_LEISURE_AGE_AVG){
-            WAIT_IN_QUEUE = false;
-            pool->size += 1;
-            pool->age_sum += client.age;
-            detach_shared_mem(pool);
+    if(client_has_child() && leisure_space_available_child() && leisure_below_age_avg_child()){
+        leisure_enter_pool_child();
+        LOG_leisure_enter_pool_child();
     }
-
-    if(WAIT_IN_QUEUE){
-
-        log_console_with_data(getpid(),
-            WHO__CLIENT,
-            ACTION__ENTERED,
-            LOCATION__LEISURE_QUEUE,
-            REASON__NONE,
-            disp_leisure_data
-        );
+    else if(leisure_space_available() && leisure_below_age_avg()){
+        leisure_enter_pool();
+        LOG_leisure_enter_pool();
+    }
+    else{
+        CLIENT_LOCATION = LOCATION__LEISURE_QUEUE;
+        if(client_has_child()) LOG_leisure_enter_queue_child();
+        else LOG_leisure_enter_queue();
 
         int status;
         while(true){
             status = USoperate_sem(POOL_SEMID, SEM_POOL_ENTER, SEM_WAIT);
 
-            if(USget_sem_value(POOL_SEMID, SEM_POOL_STATUS)){
-                log_console_with_data(getpid(),
-                    WHO__CLIENT,
-                    ACTION__LEFT,
-                    LOCATION__LEISURE_QUEUE,
-                    REASON__COMPLEX_CLOSED,
-                    disp_leisure_data
-                );
-
-                exit(EXIT_SUCCESS);
-            }
-
             if(status == SEM_SUCCESS){
-                pool =(LeisurePool*) get_shared_mem(POOL_SHMID);
-
-                if(client_has_child()){
-                    if(pool->size < POOL_SIZE[LEISURE] - 1 && leisure_age_avg(pool, client.age + child.age, 2) <= POOL_LEISURE_AGE_AVG){
-                        WAIT_IN_QUEUE = false;
-                        pool->size += 2;
-                        pool->age_sum += client.age + child.age;
-                        detach_shared_mem(pool);
-
-                        log_console_with_data(getpid(),
-                            WHO__CLIENT,
-                            ACTION__ENTERED,
-                            LOCATION__LEISURE_POOL,
-                            REASON__NONE,
-                            disp_leisure_data
-                        );
-
-                        break;
-                    } 
-                } else if(pool->size < POOL_SIZE[LEISURE] && leisure_age_avg(pool, client.age, 1) <= POOL_LEISURE_AGE_AVG){
-                    log_console_with_data(getpid(),
-                        WHO__CLIENT,
-                        ACTION__ENTERED,
-                        LOCATION__LEISURE_POOL,
-                        REASON__NONE,
-                        disp_leisure_data
-                    );
-
-                    WAIT_IN_QUEUE = false;
-                    pool->size += 1;
-                    pool->age_sum += client.age;
-                    detach_shared_mem(pool);
+                if(client_has_child() && leisure_space_available_child() && leisure_below_age_avg_child()){
+                    LOG_leisure_leave_queue_child();
+                    leisure_enter_pool_child();
+                    LOG_leisure_enter_pool_child();
                     break;
-                } else {
-                    detach_shared_mem(pool);
+                }
+                else if(leisure_space_available() && leisure_below_age_avg()){
+                    LOG_leisure_leave_queue();
+                    leisure_enter_pool();
+                    LOG_leisure_enter_pool();
+                    break;
+                } 
+                else {
+                    // operate_sem(POOL_SEMID, SEM_POOL_ENTER, SEM_SIGNAL);
                     continue;
                 }
-
-
-                log_console_with_data(getpid(),
-                    WHO__CLIENT,
-                    ACTION__LEFT,
-                    LOCATION__LEISURE_QUEUE,
-                    REASON__NONE,
-                    disp_leisure_data
-                );
-
-                break;
             }
 
             perror(__func__);
@@ -162,32 +102,21 @@ void join_leisure_pool(){
 
     
     sleep(rand_swim_time());
-    pool =(LeisurePool*) get_shared_mem(POOL_SHMID);
     if(client_has_child()){
-        pool->size -= 2;
-        pool->age_sum -= client.age + child.age;
-        detach_shared_mem(pool);
-    } else {
-        pool->size -= 1;
-        pool->age_sum -= client.age;
-        detach_shared_mem(pool);
-    }
-
-    log_console_with_data(getpid(),
-        WHO__CLIENT,
-        ACTION__LEFT,
-        LOCATION__LEISURE_POOL,
-        REASON__END_OF_SWIM_TIME,
-        disp_leisure_data
-    );
-
-    if(client_has_child()){
+        leisure_leave_pool_child();
+        LOG_leisure_leave_pool_child();
+        child.SWIM_IN_POOL = false;
+        pthread_join(child.tid, NULL);
         operate_sem(POOL_SEMID, SEM_POOL_ENTER, SEM_SIGNAL);
-        sleep(1);
+    } else {
+        leisure_leave_pool();
+        LOG_leisure_leave_pool();
     }
-    operate_sem(POOL_SEMID, SEM_POOL_ENTER, SEM_SIGNAL);
 
-    client_leave_complex();
+
+    operate_sem(POOL_SEMID, SEM_POOL_ENTER, SEM_SIGNAL);
+    LOG_leave_complex();
+    exit(EXIT_SUCCESS);
 }
 
 

@@ -17,45 +17,91 @@ int POOL_SHMID;
 int POOL_SEMID;
 
 
-double leisure_age_avg(LeisurePool* pool, int additional_age, int additional_size){
+double leisure_age_avg(int additional_age, int additional_size){
+    LeisurePool* pool =(LeisurePool*) get_shared_mem(POOL_SHMID);
     int age_sum = pool->age_sum + additional_age;
     int size_sum = pool->size + additional_size;
 
-    double age_avg =(double) age_sum / size_sum;
+    double age_avg;
+    if(size_sum != 0){
+        age_avg =(double) age_sum / size_sum;
+    }
+    else age_avg = 0;
 
+
+    detach_shared_mem(pool);
     return age_avg;
 }
 
 
-void disp_leisure_data(){
-    key_t key = get_key(POOL_LEISURE_KEY_ID);
-    int pool_shmid = access_shared_mem(key, POOL_SHARED_MEM_SIZE[LEISURE], 0600);
-    LeisurePool* pool =(LeisurePool*) get_shared_mem(pool_shmid);
+char* leisure_data(int status){
+    LeisurePool* pool =(LeisurePool*) get_shared_mem(POOL_SHMID);
 
     // Pool size
     int num;
     if(client_has_child()) num = 2;
     else num = 1;
 
-    printf_clr(cyan, "| ");
-    printf("size: %d/%d (new: %d/%d)", pool->size, POOL_SIZE[LEISURE],pool->size + num, POOL_SIZE[LEISURE]);
-
-    // Pool age sum
     int age;
     if(client_has_child()) age = client.age + child.age;
     else age = client.age;
 
-    printf_clr(cyan, " | ");
-    printf("age_sum: %d (new: %d)", pool->age_sum, pool->age_sum + age);
+    printf_clr(cyan, "| ");
+    switch(status){
+        case STATUS_ENTER:
+            printf("size: %d/%d (prev: %d/%d)", pool->size, POOL_SIZE[LEISURE], pool->size - num, POOL_SIZE[LEISURE]);
+            printf_clr(cyan, " | ");
+            printf("age_sum: %d (prev: %d)", pool->age_sum, pool->age_sum - age);
+            printf_clr(cyan, " | ");
+            printf("age_avg: %.2f/%d (prev: %.2f/%d)", leisure_age_avg(0, 0), POOL_LEISURE_AGE_AVG, leisure_age_avg(-age, -num), POOL_LEISURE_AGE_AVG);
+            break;
 
-    // Pool age avg
-    printf_clr(cyan, " | ");
-    printf("age_avg: %.2f/%d (new %.2f/%d)", leisure_age_avg(pool, 0, 0), POOL_LEISURE_AGE_AVG, leisure_age_avg(pool, age, num), POOL_LEISURE_AGE_AVG);
+        case STATUS_LEAVE:
+            printf("size: %d/%d (prev: %d/%d)", pool->size, POOL_SIZE[LEISURE], pool->size + num, POOL_SIZE[LEISURE]);
+            printf_clr(cyan, " | ");
+            printf("age_sum: %d (prev: %d)", pool->age_sum, pool->age_sum + age);
+            printf_clr(cyan, " | ");
+            printf("age_avg: %.2f/%d (prev: %.2f/%d)", leisure_age_avg(0, 0), POOL_LEISURE_AGE_AVG, leisure_age_avg(age, num), POOL_LEISURE_AGE_AVG);
+            break;
 
-    // End
+        case STATUS_NONE:
+            printf("size: %d/%d", pool->size, POOL_SIZE[LEISURE]);
+            printf_clr(cyan, " | ");
+            printf("age_sum: %d", pool->age_sum);
+            printf_clr(cyan, " | ");
+            printf("age_avg: %.2f/%d (new: %.2f/%d)", leisure_age_avg(0, 0), POOL_LEISURE_AGE_AVG, leisure_age_avg(age, num), POOL_LEISURE_AGE_AVG);
+    }
     printf_clr(cyan, " |");
 
+    // log to file
+    char* data =(char*) malloc(4096);
+    switch(status){
+        case STATUS_ENTER:
+            sprintf(data, "| size: %d/%d (prev: %d/%d) | age_sum: %d (prev: %d) | age_avg: %.2f/%d (prev: %.2f/%d) |",
+                pool->size, POOL_SIZE[LEISURE], pool->size - num, POOL_SIZE[LEISURE],
+                pool->age_sum, pool->age_sum - age,
+                leisure_age_avg(0, 0), POOL_LEISURE_AGE_AVG, leisure_age_avg(-age, -num), POOL_LEISURE_AGE_AVG
+            );
+            break;
+
+        case STATUS_LEAVE:
+            sprintf(data, "| size: %d/%d (prev: %d/%d) | age_sum: %d (prev: %d) | age_avg: %.2f/%d (prev: %.2f/%d) |",
+                pool->size, POOL_SIZE[LEISURE], pool->size + num, POOL_SIZE[LEISURE],
+                pool->age_sum, pool->age_sum + age,
+                leisure_age_avg(0, 0), POOL_LEISURE_AGE_AVG, leisure_age_avg(age, num), POOL_LEISURE_AGE_AVG
+            );
+            break;
+
+        case STATUS_NONE:
+            sprintf(data, "| size: %d/%d | age_sum: %d | age_avg: %.2f/%d (new: %.2f/%d) |",
+                pool->size, POOL_SIZE[LEISURE],
+                pool->age_sum,
+                leisure_age_avg(0, 0), POOL_LEISURE_AGE_AVG, leisure_age_avg(age, num), POOL_LEISURE_AGE_AVG
+            );
+    }
+
     detach_shared_mem(pool);
+    return data;
 }
 
 
