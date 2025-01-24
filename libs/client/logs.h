@@ -23,3 +23,13 @@ void LOG_leave_complex(){
         REASON__END_OF_SWIM_TIME
     );
 }
+
+
+void LOG_pool_closed(){
+    log_console(getpid(),
+        WHO__CLIENT,
+        ACTION__LEFT,
+        CLIENT_LOCATION,
+        REASON__POOL_CLOSED
+    );
+}

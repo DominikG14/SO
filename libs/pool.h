@@ -1,6 +1,8 @@
 #pragma once
 #define POOL_MAX_CLIENTS 1500
 
+#include <stdbool>
+
 
 enum POOL__TYPES {
     OLIMPIC,
@@ -14,6 +16,7 @@ struct POOL_OLIMPIC_SHARED_MEM {
     int size;
     int clients_pids[POOL_MAX_CLIENTS];
     int clients_pids_num;
+    bool CLOSED;
 } typedef OlimpicPool;
 
 
@@ -22,6 +25,7 @@ struct POOL_LEISURE_SHARED_MEM {
     int age_sum;
     int clients_pids[POOL_MAX_CLIENTS];
     int clients_pids_num;
+    bool CLOSED;
 } typedef LeisurePool;
 
 
@@ -29,6 +33,7 @@ struct POOL_PADDLING_SHARED_MEM {
     int size;
     int clients_pids[POOL_MAX_CLIENTS];
     int clients_pids_num;
+    bool CLOSED;
 } typedef PaddlingPool;
 
 

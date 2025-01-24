@@ -83,10 +83,11 @@ void __create_pool_resources(){
     OlimpicPool* op = get_shared_mem(shmid);
     op->size = 0;
     op->clients_pids_num = 0;
+    op->CLOSED = false;
     detach_shared_mem(op);
 
-    semid = access_sem(key, 2, IPC_CREAT|0600);
-    init_sem(semid, 2);
+    semid = access_sem(key, 1, IPC_CREAT|0600);
+    init_sem(semid, 1);
 
 
     // Leisure
@@ -96,10 +97,11 @@ void __create_pool_resources(){
     lp->size = 0;
     lp->age_sum = 0;
     lp->clients_pids_num = 0;
+    lp->CLOSED = false;
     detach_shared_mem(lp);
 
-    semid = access_sem(key, 2, IPC_CREAT|0600);
-    init_sem(semid, 2);
+    semid = access_sem(key, 1, IPC_CREAT|0600);
+    init_sem(semid, 1);
 
 
     // Paddling
@@ -108,10 +110,11 @@ void __create_pool_resources(){
     PaddlingPool* pp = get_shared_mem(shmid);
     pp->size = 0;
     pp->clients_pids_num = 0;
+    pp->CLOSED = false;
     detach_shared_mem(pp);
 
-    semid = access_sem(key, 2, IPC_CREAT|0600);
-    init_sem(semid, 2);
+    semid = access_sem(key, 1, IPC_CREAT|0600);
+    init_sem(semid, 1);
 }
 
 

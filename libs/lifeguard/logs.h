@@ -32,3 +32,23 @@ void LOG_leave_complex(){
         REASON__COMPLEX_CLOSED
     );
 }
+
+
+void LOG_closed_pool(){
+    log_console(getpid(),
+        WHO__LIFEGUARD,
+        ACTION__CLOSED,
+        GUARDED_POOL,
+        REASON__NONE
+    );
+}
+
+
+void LOG_pool_reopened(){
+    log_console(getpid(),
+        WHO__LIFEGUARD,
+        ACTION__OPENED,
+        GUARDED_POOL,
+        REASON__NONE
+    );
+}

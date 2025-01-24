@@ -36,7 +36,6 @@ void* spawn_child(){
     child_leave_complex();
 }
 
-
 void set_client_data(){
 // Set child flags
     child.tid = -1;
