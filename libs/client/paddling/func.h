@@ -21,6 +21,8 @@ void paddling_enter_pool(){
     CLIENT_LOCATION = LOCATION__PADDLING_POOL;
     PaddlingPool* pool =(PaddlingPool*) get_shared_mem(POOL_SHMID);
     pool->size += 2;
+    pool->clients_pids[pool->clients_pids_num] = getpid();
+    pool->clients_pids_num++;
     detach_shared_mem(pool);
 }
 

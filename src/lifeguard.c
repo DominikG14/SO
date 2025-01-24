@@ -1,40 +1,18 @@
-#include <stdbool.h>
-#include <stdio.h>
-
-#include "low/signal.h"
-#include "logging.h"
-
-
-bool LIFEGUARD_WATCH_POOL = true;
-int GUARDED_POOL;
-
-
-void remove_lifeguard(){
-    LIFEGUARD_WATCH_POOL = false;
-}
+#include "lifeguard.h"
 
 
 int main(int argc, char* argv[]){
     GUARDED_POOL = atoi(argv[1]);
+    setup();
 
-    log_console(getpid(),
-        WHO__LIFEGUARD,
-        ACTION__ENTERED,
-        GUARDED_POOL,
-        REASON__NONE
-    );
+    LOG_enter_guarder_pool();
 
-    handle_signal(SIGUSR1, remove_lifeguard);
-    while(LIFEGUARD_WATCH_POOL){
-        // TODO: Add lifeguard functionality here
+    while(true){
+        if(rand_int(1, 100) <= LIFEGUARD_CLOSE_POOL_PERC){
+            send_signal(0, SIG_LIFEGUARD_CLOSE_POOL);
+
+            sleep(rand_int(LIFEGUARD_CLOSE_POOL_MIN_TIME, LIFEGUARD_CLOSE_POOL_MAX_TIME));
+        }
     }
-
-    log_console(getpid(),
-        WHO__LIFEGUARD,
-        ACTION__LEFT,
-        GUARDED_POOL,
-        REASON__COMPLEX_CLOSED
-    );
-
     return 0;
 }

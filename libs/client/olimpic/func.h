@@ -9,6 +9,8 @@ void olimpic_enter_pool(){
     CLIENT_LOCATION = LOCATION__OLIMPIC_POOL;
     OlimpicPool* pool =(OlimpicPool*) get_shared_mem(POOL_SHMID);
     pool->size += 1;
+    pool->clients_pids[pool->clients_pids_num] = getpid();
+    pool->clients_pids_num++;
     detach_shared_mem(pool);
 }
 

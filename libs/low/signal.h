@@ -7,7 +7,7 @@
 
 enum SIG_ABBR {
     SIG_CLOSE_POOL = SIGUSR1, // Main -> Everyone
-    SIG_LEAVE_CASH_CHILD = SIGUSR1, // Client -> Child
+    SIG_LIFEGUARD_CLOSE_POOL = SIGUSR2,
 };
 
 

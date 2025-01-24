@@ -82,6 +82,7 @@ void __create_pool_resources(){
     shmid = access_shared_mem(key, POOL_SHARED_MEM_SIZE[OLIMPIC], IPC_CREAT|0600);
     OlimpicPool* op = get_shared_mem(shmid);
     op->size = 0;
+    op->clients_pids_num = 0;
     detach_shared_mem(op);
 
     semid = access_sem(key, 2, IPC_CREAT|0600);
@@ -94,6 +95,7 @@ void __create_pool_resources(){
     LeisurePool* lp = get_shared_mem(shmid);
     lp->size = 0;
     lp->age_sum = 0;
+    lp->clients_pids_num = 0;
     detach_shared_mem(lp);
 
     semid = access_sem(key, 2, IPC_CREAT|0600);
@@ -105,6 +107,7 @@ void __create_pool_resources(){
     shmid = access_shared_mem(key, POOL_SHARED_MEM_SIZE[PADDLING], IPC_CREAT|0600);
     PaddlingPool* pp = get_shared_mem(shmid);
     pp->size = 0;
+    pp->clients_pids_num = 0;
     detach_shared_mem(pp);
 
     semid = access_sem(key, 2, IPC_CREAT|0600);
