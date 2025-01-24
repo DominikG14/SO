@@ -22,14 +22,33 @@ void __log_console(int ID, int WHO, int ACTION, int LOCATION, int REASON){
 }
 
 
+void log_file(char* filepath, int ID, int WHO, int ACTION, int LOCATION, int REASON, char* data){
+    char buffer[4096];
+    sprintf(buffer, "%-10d%-18s%-18s%-20s%-20s%s\n",
+        ID,
+        WHO_NAME[WHO],
+        ACTION_NAME[ACTION],
+        LOCATION_NAME[LOCATION],
+        REASON_NAME[REASON],
+        data
+    );
+
+    append_file(filepath, buffer);
+}
+
+
 void log_console(int ID, int WHO, int ACTION, int LOCATION, int REASON){
     __log_console(ID, WHO, ACTION, LOCATION, REASON);
+    log_file(LOGGING_FILEPATH, ID, WHO, ACTION, LOCATION, REASON, "");
     printf("\n");
 }
 
 
-void log_console_with_data(int ID, int WHO, int ACTION, int LOCATION, int REASON, void (*data)()){
+void log_console_with_data(int ID, int WHO, int ACTION, int LOCATION, int REASON, char* (*data)()){
     __log_console(ID, WHO, ACTION, LOCATION, REASON);
-    data();
+    char* return_data = data();
     printf("\n");
+
+    log_file(LOGGING_FILEPATH, ID, WHO, ACTION, LOCATION, REASON, return_data);
+    free(return_data), return_data = NULL;
 }

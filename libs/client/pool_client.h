@@ -12,6 +12,8 @@
 #include "keys_id.h"
 #include "logs.h"
 
+#include "olimpic/func.h"
+
 
 void join_paddling_pool(){
     bool WAIT_IN_QUEUE = true;
@@ -253,36 +255,6 @@ void join_leisure_pool(){
 }
 
 
-void olimpic_enter_pool(){
-    OlimpicPool* pool =(OlimpicPool*) get_shared_mem(POOL_SHMID);
-    pool->size += 1;
-    detach_shared_mem(pool);
-}
-
-bool olimpic_space_available(){
-    OlimpicPool* pool =(OlimpicPool*) get_shared_mem(POOL_SHMID);
-    int cur_size = pool->size;
-    detach_shared_mem(pool);
-    return cur_size < POOL_SIZE[CURRENT_POOL];
-}
-
-void olimpic_set_as_cur_pool(){
-    CURRENT_POOL = OLIMPIC;
-
-    // Generate access to pool resources
-    key_t key  = get_key(POOL_OLIMPIC_KEY_ID);
-    POOL_SEMID = access_sem(key, SEM_POOL_NUM, 0600);
-    POOL_SHMID = access_shared_mem(key, POOL_SHARED_MEM_SIZE[CURRENT_POOL], 0600);
-}
-
-
-void olimpic_leave_pool(){
-    OlimpicPool* pool =(OlimpicPool*) get_shared_mem(POOL_SHMID);
-    pool->size -= 1;
-    detach_shared_mem(pool);
-}
-
-
 void join_olimpic_pool(){
     olimpic_set_as_cur_pool();
 
@@ -298,17 +270,16 @@ void join_olimpic_pool(){
         while(true){
             status = USoperate_sem(POOL_SEMID, SEM_POOL_ENTER, SEM_WAIT);
 
-            // if(USget_sem_value(POOL_SEMID, SEM_POOL_STATUS)){
-            //     log_console_with_data(getpid(),
-            //         WHO__CLIENT,
-            //         ACTION__LEFT,
-            //         LOCATION__OLIMPIC_QUEUE,
-            //         REASON__COMPLEX_CLOSED,
-            //         disp_olimpic_data
-            //     );
+            if(USget_sem_value(POOL_SEMID, SEM_POOL_STATUS)){
+                log_console(getpid(),
+                    WHO__CLIENT,
+                    ACTION__LEFT,
+                    LOCATION__OLIMPIC_QUEUE,
+                    REASON__COMPLEX_CLOSED
+                );
 
-            //     exit(EXIT_SUCCESS);
-            // }
+                exit(EXIT_SUCCESS);
+            }
 
             if(status == SEM_SUCCESS){
                 LOG_olimpic_leave_queue();

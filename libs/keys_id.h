@@ -1,5 +1,7 @@
 #pragma once
 
+char* LOGGING_FILEPATH = "./logs";
+
 // Keys to access IPCS
 enum KEYS {
     POOL_OLIMPIC_KEY_ID,

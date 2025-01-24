@@ -39,6 +39,14 @@ void wait_in_cash_queue(){
                 REASON__CASH_CLOSED
             );
 
+            log_console(getpid(),
+                WHO__CLIENT,
+                ACTION__LEFT,
+                LOCATION__POOL_COMPLEX,
+                REASON__POOL_CLOSED
+            );
+
+
             exit(EXIT_SUCCESS);
         }
 
@@ -81,7 +89,6 @@ void wait_in_cash_queue(){
             break;
         }
     }
-    child.WAIT_IN_CASH = false;
 
     close(fd_fifo);
     unlink(pid_str);
@@ -94,4 +101,5 @@ void wait_in_cash_queue(){
         LOCATION__CASH_QUEUE,
         REASON__PAYMENT_FINISHED
     );
+    child.WAIT_IN_CASH = false;
 }

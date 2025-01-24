@@ -34,6 +34,11 @@ void __load_config(){
 }
 
 
+void __reset_logs(){
+    if(remove(LOGGING_FILEPATH) != 0){}
+}
+
+
 void __create_tmp_dir(){
     switch(fork()){
         case FORK_FAILURE:
@@ -61,7 +66,7 @@ void __delete_pool_resources(int pool_num){
     shmid = access_shared_mem(key, POOL_SHARED_MEM_SIZE[pool_num], 0600);
     delete_shared_mem(shmid);
 
-    semid = access_sem(key, 2, 0600);
+    semid = access_sem(key, SEM_POOL_NUM, 0600);
     delete_sem(semid);
 }
 
@@ -80,6 +85,7 @@ void __create_pool_resources(int pool_num){
 void setup(){
     __load_config();
     __create_tmp_dir();
+    __reset_logs();
     signal(SIGUSR1, SIG_IGN); // Signal init
     __create_pool_resources(OLIMPIC);
     __create_pool_resources(LEISURE);

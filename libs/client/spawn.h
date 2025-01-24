@@ -37,10 +37,8 @@ void* spawn_child(){
 }
 
 
-void spawn_client(){
-    srand(getpid());
-    
-    // Set child flags
+void set_client_data(){
+// Set child flags
     child.tid = -1;
 
     // Set Client data
@@ -61,7 +59,11 @@ void spawn_client(){
         pthread_t child_tid = new_thread(spawn_child, NULL);
         child.tid = child_tid;
     }
+}
 
+void spawn_client(){
+    srand(getpid());
+    set_client_data();
     handle_signal(SIG_CLOSE_POOL, client_leave_complex);
 
     log_console_with_data(getpid(),
@@ -69,7 +71,7 @@ void spawn_client(){
         ACTION__ENTERED,
         LOCATION__CASH_QUEUE,
         REASON__NONE,
-        disp_client_data
+        client_data
     );
 
     if(client_has_child()){
@@ -78,7 +80,7 @@ void spawn_client(){
             ACTION__ENTERED,
             LOCATION__CASH_QUEUE,
             REASON__NONE,
-            disp_child_data
+            child_data
         );
     }
 }
