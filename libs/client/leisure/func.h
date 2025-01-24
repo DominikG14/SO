@@ -20,16 +20,18 @@ bool leisure_below_age_avg_child(){
 bool leisure_space_available(){
     LeisurePool* pool =(LeisurePool*) get_shared_mem(POOL_SHMID);
     int cur_size = pool->size;
+    bool open = !(pool->CLOSED);
     detach_shared_mem(pool);
-    return cur_size < POOL_SIZE[LEISURE];
+    return cur_size < POOL_SIZE[LEISURE] && open;
 }
 
 
 bool leisure_space_available_child(){
     LeisurePool* pool =(LeisurePool*) get_shared_mem(POOL_SHMID);
     int cur_size = pool->size;
+    bool open = !(pool->CLOSED);
     detach_shared_mem(pool);
-    return POOL_SIZE[LEISURE] - cur_size >= 2;
+    return POOL_SIZE[LEISURE] - cur_size >= 2 && open;
 }
 
 
@@ -72,7 +74,6 @@ void leisure_closed_pool(){
     LOG_pool_closed();
     if(client_has_child()) leisure_leave_pool_child();
     else leisure_leave_pool();
-    leisure_enter_queue();
     join_leisure_pool();
 }
 

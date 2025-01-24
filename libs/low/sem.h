@@ -87,3 +87,9 @@ int USget_sem_value(int semid, int semnum){
     int status = semctl(semid, semnum, GETVAL);
     return status;
 }
+
+
+int USget_sem_waiting_count(int semid, int semnum) {
+    int waiting_count = semctl(semid, semnum, GETNCNT);
+    return waiting_count;
+}

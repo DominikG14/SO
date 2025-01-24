@@ -37,7 +37,6 @@ void paddling_enter_queue(){
 void paddling_closed_pool(){
     LOG_pool_closed();
     paddling_leave_pool();
-    paddling_enter_queue();
     join_paddling_pool();
 }
 
@@ -52,8 +51,9 @@ void paddling_set_as_cur_pool(){
 bool paddling_space_available(){
     PaddlingPool* pool =(PaddlingPool*) get_shared_mem(POOL_SHMID);
     int cur_size = pool->size;
+    bool open = !(pool->CLOSED);
     detach_shared_mem(pool);
-    return POOL_SIZE[PADDLING] - cur_size >= 2;
+    return POOL_SIZE[PADDLING] - cur_size >= 2 && open;
 }
 
 

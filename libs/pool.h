@@ -1,7 +1,7 @@
 #pragma once
 #define POOL_MAX_CLIENTS 1500
 
-#include <stdbool>
+#include <stdbool.h>
 
 
 enum POOL__TYPES {

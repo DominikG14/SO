@@ -8,7 +8,6 @@
 void olimpic_closed_pool(){
     LOG_pool_closed();
     olimpic_leave_pool();
-    olimpic_enter_queue();
     join_olimpic_pool();
 }
 
@@ -48,8 +47,9 @@ void olimpic_enter_pool(){
 bool olimpic_space_available(){
     OlimpicPool* pool =(OlimpicPool*) get_shared_mem(POOL_SHMID);
     int cur_size = pool->size;
+    bool open = !(pool->CLOSED);
     detach_shared_mem(pool);
-    return cur_size < POOL_SIZE[OLIMPIC];
+    return cur_size < POOL_SIZE[OLIMPIC] && open;
 }
 
 

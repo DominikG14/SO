@@ -35,7 +35,7 @@ void __load_config(){
 
 
 void __reset_logs(){
-    if(remove(LOGGING_FILEPATH) != 0){}
+    if(remove(LOGGING_FILEPATH) != 0);
 }
 
 
