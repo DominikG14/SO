@@ -128,8 +128,6 @@ void leisure_enter_pool(){
     LeisurePool* pool =(LeisurePool*) get_shared_mem(POOL_SHMID);
     pool->size += 1;
     pool->age_sum += client.age;
-    pool->clients_pids[pool->clients_pids_num] = getpid();
-    pool->clients_pids_num++;
     detach_shared_mem(pool);
 }
 

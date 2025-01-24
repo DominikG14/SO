@@ -50,6 +50,7 @@ void paddling_closed_pool(){
 
 
 void paddling_enter_pool(){
+    handle_signal(SIG_LIFEGUARD_CLOSE_POOL, paddling_closed_pool);
     CLIENT_LOCATION = LOCATION__PADDLING_POOL;
     PaddlingPool* pool =(PaddlingPool*) get_shared_mem(POOL_SHMID);
     pool->size += 2;
