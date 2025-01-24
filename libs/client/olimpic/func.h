@@ -5,10 +5,47 @@
 #include "low.h"
 
 
+void olimpic_enter_lifeguard_queue(){
+    CLIENT_LOCATION = LOCATION__OLIMPIC_QUEUE;
+    log_pool_data(getpid(),
+        WHO__CLIENT,
+        ACTION__ENTERED,
+        LOCATION__OLIMPIC_QUEUE,
+        REASON__POOL_CLOSED,
+        olimpic_data,
+        STATUS_NONE
+    );
+
+    int status;
+    while(true){
+        status = USoperate_sem(POOL_SEMID, SEM_POOL_LIFEGUARD, SEM_WAIT);
+
+        if(status == SEM_SUCCESS){
+            break;
+        }
+
+        perror(__func__);
+        exit(EXIT_FAILURE);
+    }
+
+    log_pool_data(getpid(),
+        WHO__CLIENT,
+        ACTION__LEFT,
+        LOCATION__OLIMPIC_QUEUE,
+        REASON__POOL_CLOSED,
+        olimpic_data,
+        STATUS_LEAVE
+    );
+    olimpic_enter_pool();
+    LOG_olimpic_enter_pool();
+    olimpic_swim_in_pool();
+}
+
+
 void olimpic_closed_pool(){
     LOG_pool_closed();
     olimpic_leave_pool();
-    join_olimpic_pool();
+    olimpic_enter_lifeguard_queue();
 }
 
 
@@ -38,8 +75,6 @@ void olimpic_enter_pool(){
     CLIENT_LOCATION = LOCATION__OLIMPIC_POOL;
     OlimpicPool* pool =(OlimpicPool*) get_shared_mem(POOL_SHMID);
     pool->size += 1;
-    pool->clients_pids[pool->clients_pids_num] = getpid();
-    pool->clients_pids_num++;
     detach_shared_mem(pool);
 }
 

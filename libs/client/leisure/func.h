@@ -8,6 +8,43 @@
 #include "client/vars.h"
 
 
+void leisure_enter_lifeguard_queue(){
+    CLIENT_LOCATION = LOCATION__LEISURE_QUEUE;
+    log_pool_data(getpid(),
+        WHO__CLIENT,
+        ACTION__ENTERED,
+        LOCATION__LEISURE_QUEUE,
+        REASON__POOL_CLOSED,
+        leisure_data,
+        STATUS_NONE
+    );
+
+    int status;
+    while(true){
+        status = USoperate_sem(POOL_SEMID, SEM_POOL_LIFEGUARD, SEM_WAIT);
+
+        if(status == SEM_SUCCESS){
+            break;
+        }
+
+        perror(__func__);
+        exit(EXIT_FAILURE);
+    }
+
+    log_pool_data(getpid(),
+        WHO__CLIENT,
+        ACTION__LEFT,
+        LOCATION__LEISURE_QUEUE,
+        REASON__POOL_CLOSED,
+        leisure_data,
+        STATUS_LEAVE
+    );
+    leisure_enter_pool();
+    LOG_leisure_enter_pool();
+    leisure_swim_in_pool();
+}
+
+
 bool leisure_below_age_avg(){
     return leisure_age_avg(client.age, 1) <= POOL_LEISURE_AGE_AVG;
 }
@@ -74,7 +111,7 @@ void leisure_closed_pool(){
     LOG_pool_closed();
     if(client_has_child()) leisure_leave_pool_child();
     else leisure_leave_pool();
-    join_leisure_pool();
+    leisure_enter_lifeguard_queue();
 }
 
 
@@ -102,8 +139,6 @@ void leisure_enter_pool_child(){
     LeisurePool* pool =(LeisurePool*) get_shared_mem(POOL_SHMID);
     pool->size += 2;
     pool->age_sum += client.age + child.age;
-    pool->clients_pids[pool->clients_pids_num] = getpid();
-    pool->clients_pids_num++;
     detach_shared_mem(pool);
 }
 

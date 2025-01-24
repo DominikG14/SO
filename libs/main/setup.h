@@ -86,8 +86,8 @@ void __create_pool_resources(){
     op->CLOSED = false;
     detach_shared_mem(op);
 
-    semid = access_sem(key, 1, IPC_CREAT|0600);
-    init_sem(semid, 1);
+    semid = access_sem(key, SEM_POOL_NUM, IPC_CREAT|0600);
+    init_sem(semid, SEM_POOL_NUM);
 
 
     // Leisure
@@ -100,8 +100,8 @@ void __create_pool_resources(){
     lp->CLOSED = false;
     detach_shared_mem(lp);
 
-    semid = access_sem(key, 1, IPC_CREAT|0600);
-    init_sem(semid, 1);
+    semid = access_sem(key, SEM_POOL_NUM, IPC_CREAT|0600);
+    init_sem(semid, SEM_POOL_NUM);
 
 
     // Paddling
@@ -113,8 +113,8 @@ void __create_pool_resources(){
     pp->CLOSED = false;
     detach_shared_mem(pp);
 
-    semid = access_sem(key, 1, IPC_CREAT|0600);
-    init_sem(semid, 1);
+    semid = access_sem(key, SEM_POOL_NUM, IPC_CREAT|0600);
+    init_sem(semid, SEM_POOL_NUM);
 }
 
 

@@ -33,7 +33,7 @@ void close_cash(){
 void open_cash(){
     key_t key = get_key(CASH_KEY_ID);
     CASH_SEMID = access_sem(key, SEM_CASH_NUM, IPC_CREAT|0600);
-    init_sem(CASH_SEMID, 2);
+    init_sem(CASH_SEMID, SEM_CASH_NUM);
     CASH_MSQID = access_msq(key, IPC_CREAT|0600);
 
     handle_signal(SIG_CLOSE_POOL, close_cash);

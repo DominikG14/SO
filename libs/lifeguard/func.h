@@ -24,7 +24,7 @@ void setup(){
 
     key_t key = get_key(GUARDED_POOL);
     POOL_SHMID = access_shared_mem(key, POOL_NUM, 0600);
-    POOL_SEMID = access_sem(key, 1, 0600);
+    POOL_SEMID = access_sem(key, SEM_POOL_NUM, 0600);
 
     load_config();
     LIFEGUARD_CLOSE_POOL_MAX_TIME = SIM_CONFIG[LIFEGUARD__CLOSE_POOL_MAX_TIME] / SIM_CONFIG[TIME__PER_SEC];
@@ -75,49 +75,37 @@ void open_pool(){
         case OLIMPIC:
             OlimpicPool* op =(OlimpicPool*) get_shared_mem(POOL_SHMID);
 
-            for(int i = 0; i < op->clients_pids_num; i++){
-                send_signal(op->clients_pids[i], SIG_LIFEGUARD_CLOSE_POOL);
+            while(USget_sem_waiting_count(POOL_SEMID, SEM_POOL_LIFEGUARD) > 0){
+                operate_sem(POOL_SEMID, SEM_POOL_LIFEGUARD, SEM_SIGNAL);
             }
 
             op->CLOSED = false;
-
-            // while(USget_sem_waiting_count(POOL_SEMID, SEM_POOL_ENTER) > 0 && op->size <= POOL_SIZE[OLIMPIC]){
-            //     detach_shared_mem(op);
-            //     op =(OlimpicPool*) get_shared_mem(POOL_SHMID);
-            //     printf("\t%d - %d\n", USget_sem_waiting_count(POOL_SEMID, SEM_POOL_ENTER), op->size);
-            //     operate_sem(POOL_SEMID, SEM_POOL_ENTER, SEM_SIGNAL);
-            // }
-
             detach_shared_mem(op);
             break;
         
 
         case LEISURE:
             LeisurePool* lp =(LeisurePool*) get_shared_mem(POOL_SHMID);
-            lp->CLOSED = false;
 
-            while(USget_sem_waiting_count(POOL_SEMID, SEM_POOL_ENTER) > 0 && lp->size <= POOL_SIZE[LEISURE]){
-                detach_shared_mem(lp);
-                lp =(LeisurePool*) get_shared_mem(POOL_SHMID);
-                printf("\t%d - %d\n", USget_sem_waiting_count(POOL_SEMID, SEM_POOL_ENTER), lp->size);
-                operate_sem(POOL_SEMID, SEM_POOL_ENTER, SEM_SIGNAL);
+            while(USget_sem_waiting_count(POOL_SEMID, SEM_POOL_LIFEGUARD) > 0){
+                printf("\t%d vs %d\n", USget_sem_waiting_count(POOL_SEMID, SEM_POOL_LIFEGUARD), USget_sem_waiting_count(POOL_SEMID, SEM_POOL_ENTER));
+                operate_sem(POOL_SEMID, SEM_POOL_LIFEGUARD, SEM_SIGNAL);
             }
 
+            lp->CLOSED = false;
             detach_shared_mem(lp);
             break;
 
 
         case PADDLING:
             PaddlingPool* pp =(PaddlingPool*) get_shared_mem(POOL_SHMID);
-            pp->CLOSED = false;
 
-            while(USget_sem_waiting_count(POOL_SEMID, SEM_POOL_ENTER) > 0 && pp->size <= POOL_SIZE[PADDLING]){
-                detach_shared_mem(pp);
-                pp =(PaddlingPool*) get_shared_mem(POOL_SHMID);
-                printf("\t%d - %d\n", USget_sem_waiting_count(POOL_SEMID, SEM_POOL_ENTER), pp->size);
-                operate_sem(POOL_SEMID, SEM_POOL_ENTER, SEM_SIGNAL);
+            while(USget_sem_waiting_count(POOL_SEMID, SEM_POOL_LIFEGUARD) > 0){
+                printf("\t%d vs %d\n", USget_sem_waiting_count(POOL_SEMID, SEM_POOL_LIFEGUARD), USget_sem_waiting_count(POOL_SEMID, SEM_POOL_ENTER));
+                operate_sem(POOL_SEMID, SEM_POOL_LIFEGUARD, SEM_SIGNAL);
             }
 
+            pp->CLOSED = false;
             detach_shared_mem(pp);
             break;
     }

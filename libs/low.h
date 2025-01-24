@@ -1,6 +1,5 @@
 #pragma once
 
-#include "low/fifo.h"
 #include "low/files.h"
 #include "low/key.h"
 #include "low/msq.h"
