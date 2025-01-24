@@ -105,9 +105,7 @@ char* olimpic_data(int status){
 
 
 char* paddling_data(int status){
-    key_t key = get_key(POOL_PADDLING_KEY_ID);
-    int pool_shmid = access_shared_mem(key, POOL_SHARED_MEM_SIZE[PADDLING], 0600);
-    PaddlingPool* pool =(PaddlingPool*) get_shared_mem(pool_shmid);
+    PaddlingPool* pool =(PaddlingPool*) get_shared_mem(POOL_SHMID);
 
     // Child age
     printf_clr(cyan, "| ");

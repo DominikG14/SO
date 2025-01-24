@@ -46,7 +46,7 @@ void join_paddling_pool(){
 
     sleep(rand_swim_time());
     paddling_leave_pool();
-    LOG_olimpic_leave_pool();
+    LOG_paddling_leave_pool();
     child.SWIM_IN_POOL = false;
     pthread_join(child.tid, NULL);
 
@@ -56,13 +56,11 @@ void join_paddling_pool(){
 
 
 void join_leisure_pool(){
-    bool WAIT_IN_QUEUE = true;
+
 
     key_t key = get_key(POOL_LEISURE_KEY_ID);
-
-    int POOL_SEMID = access_sem(key, SEM_POOL_NUM, 0600);
-
-    int POOL_SHMID = access_shared_mem(key, POOL_SHARED_MEM_SIZE[LEISURE], 0600);
+    POOL_SEMID = access_sem(key, SEM_POOL_NUM, 0600);
+    POOL_SHMID = access_shared_mem(key, POOL_SHARED_MEM_SIZE[LEISURE], 0600);
     LeisurePool* pool =(LeisurePool*) get_shared_mem(POOL_SHMID);
 
 

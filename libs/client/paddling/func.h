@@ -14,7 +14,7 @@ bool paddling_space_available(){
     PaddlingPool* pool =(PaddlingPool*) get_shared_mem(POOL_SHMID);
     int cur_size = pool->size;
     detach_shared_mem(pool);
-    return cur_size / 2 < POOL_SIZE[PADDLING] / 2;
+    return POOL_SIZE[PADDLING] - cur_size >= 2;
 }
 
 void paddling_enter_pool(){
