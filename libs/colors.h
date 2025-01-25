@@ -45,25 +45,3 @@ void printf_clr(void (*clr)(), const char *format, ...) {
 
     reset();
 }
-
-
-// Test look of all colors
-void __TEST_colors(){
-    printf_clr(black, "black\n");
-    printf_clr(red, "red\n");
-    printf_clr(green, "green\n");
-    printf_clr(yellow, "yellow\n");
-    printf_clr(blue, "blue\n");
-    printf_clr(magenta, "magenta\n");
-    printf_clr(cyan, "cyan\n");
-    printf_clr(white, "white\n");
-
-    printf_clr(bright_black, "bright_black\n"); 
-    printf_clr(bright_red, "bright_red\n"); 
-    printf_clr(bright_green, "bright_green\n"); 
-    printf_clr(bright_yellow, "bright_yellow\n"); 
-    printf_clr(bright_blue, "bright_blue\n"); 
-    printf_clr(bright_magenta, "bright_magenta\n"); 
-    printf_clr(bright_cyan, "bright_cyan\n"); 
-    printf_clr(bright_white, "bright_white\n"); 
-}

@@ -7,14 +7,14 @@ BUILDDIR = build
 SRC_MAIN  = $(SRCDIR)/main.c
 EXEC_MAIN = $(BUILDDIR)/main
 
-SRC_CLIENT  = $(SRCDIR)/client.c
-EXEC_CLIENT = $(BUILDDIR)/client
+SRC_KLIENT  = $(SRCDIR)/klient.c
+EXEC_KLIENT = $(BUILDDIR)/klient
 
-SRC_CASHIER  = $(SRCDIR)/cashier.c
-EXEC_CASHIER = $(BUILDDIR)/cashier
+SRC_KASJER  = $(SRCDIR)/kasjer.c
+EXEC_KASJER = $(BUILDDIR)/kasjer
 
-SRC_LIFEGUARD  = $(SRCDIR)/lifeguard.c
-EXEC_LIFEGUARD = $(BUILDDIR)/lifeguard
+SRC_RATOWNIK  = $(SRCDIR)/ratownik.c
+EXEC_RATOWNIK = $(BUILDDIR)/ratownik
 
 
 all: $(EXEC_MAIN)
@@ -24,9 +24,9 @@ $(EXEC_MAIN): $(SRC_MAIN)
 	rm -rf $(BUILDDIR)
 	mkdir $(BUILDDIR)
 	$(CC) $(CFLAGS) $(SRC_MAIN) -o $(EXEC_MAIN)
-	$(CC) $(CFLAGS) $(SRC_CLIENT) -o $(EXEC_CLIENT)
-	$(CC) $(CFLAGS) $(SRC_CASHIER) -o $(EXEC_CASHIER)
-	$(CC) $(CFLAGS) $(SRC_LIFEGUARD) -o $(EXEC_LIFEGUARD)
+	$(CC) $(CFLAGS) $(SRC_KLIENT) -o $(EXEC_KLIENT)
+	$(CC) $(CFLAGS) $(SRC_KASJER) -o $(EXEC_KASJER)
+	# $(CC) $(CFLAGS) $(SRC_RATOWNIK) -o $(EXEC_RATOWNIK)
 
 
 clean:
