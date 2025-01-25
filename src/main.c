@@ -8,13 +8,13 @@ int main(){
     setup();
 
     // Kasjer otwiera kase
-    switch(PID_KASJER = fork()){
+    switch(PID_CASHIER = fork()){
         case FAILURE:
             perror("main - fork");
             exit(EXIT_FAILURE);
 
         case SUCCESS:
-            execl(PS_KASJER_PATH, PS_KASJER_NAME, NULL);
+            execl(PS_CASHIER_PATH, PS_CASHIER_NAME, NULL);
             perror("main - execl");
             exit(EXIT_FAILURE);
     }
@@ -28,30 +28,29 @@ int main(){
                 exit(EXIT_FAILURE);
 
             case SUCCESS:
-                execl(PS_KLIENT_PATH, PS_KLIENT_NAME, NULL);
+                execl(PS_CLIENT_PATH, PS_CLIENT_NAME, NULL);
                 perror("main - execl");
                 exit(EXIT_FAILURE);
             
             default:
-                PID_KLIENCI[ILOSC_KLIENTOW] = pid;
-                ILOSC_KLIENTOW++;
+                PID_CLIENTS[CLIENTS_NUM] = pid;
+                CLIENTS_NUM++;
         }
     }
 
-
     // Zamknij kase
-    kill(PID_KASJER, SIG_ZAMKNIJ_BASENY);
-    waitpid(PID_KASJER, NULL, 0);
+    kill(PID_CASHIER, SIG_CLOSE_COMPLEX);
+    waitpid(PID_CASHIER, NULL, 0);
 
 
     // Poczekaj az wszyscy opuszcza basen
-    for(int i = 0; i < ILOSC_KLIENTOW; i++){
-        kill(PID_KLIENCI[i], SIG_ZAMKNIJ_BASENY);
-        waitpid(PID_KLIENCI[i], NULL, 0);
+    for(int i = 0; i < CLIENTS_NUM; i++){
+        kill(PID_CLIENTS[i], SIG_CLOSE_COMPLEX);
+        waitpid(PID_CLIENTS[i], NULL, 0);
     }
 
 
     // Wyczysc pamiec dzielona
     cleanup();
-    return 0;
+    exit(EXIT_SUCCESS);
 }

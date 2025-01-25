@@ -6,32 +6,32 @@
 
 
 // Local
-bool KASA_OTWARTA= true;
+bool CASH_OPEN= true;
 
 
 // IPCS
-void __zamknij_baseny_handler(){
-    KASA_OTWARTA = false;
+void __close_complex_handler(){
+    CASH_OPEN = false;
 }
 
-void __set_zamknij_baseny_handler(){
+void __set_close_complex_handler(){
     struct sigaction handler;
-    handler.sa_handler = __zamknij_baseny_handler;
+    handler.sa_handler = __close_complex_handler;
     sigemptyset(&handler.sa_mask);
     handler.sa_flags = 0;
-    sigaction(SIG_ZAMKNIJ_BASENY, &handler, 0);
+    sigaction(SIG_CLOSE_COMPLEX, &handler, 0);
 }
 
 void __access_kasa_msq(){
-    key_t key = ftok(".", KASA_KEY);
-    if((KASA_MSQID = msgget(key, 0600)) == FAILURE){
+    key_t key = ftok(".", KEY_CASH);
+    if((CASH_MSQID = msgget(key, 0600)) == FAILURE){
         perror("kasjer - msgget");
         exit(EXIT_FAILURE);
     }
 }
 
 void setup(){
-    __set_zamknij_baseny_handler();
+    __set_close_complex_handler();
     __access_kasa_msq();
 
 }

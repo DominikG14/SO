@@ -6,15 +6,15 @@
 
 
 // Processes data
-int PID_KASJER;
+int PID_CASHIER;
 
-int PID_KLIENCI[1000];
-int ILOSC_KLIENTOW = 0;
+int PID_CLIENTS[1000];
+int CLIENTS_NUM = 0;
 
 
 // IPCS
 void cleanup(){
-    msgctl(KASA_MSQID, IPC_RMID, NULL);
+    msgctl(CASH_MSQID, IPC_RMID, NULL);
 }
 
 void __shutdown_handler(int sig){
@@ -31,9 +31,9 @@ void __set_shutdown_handler(){
     sigaction(SIGINT, &handler, 0);
 }
 
-void __create_kasa_msq(){
-    key_t key = ftok(".", KASA_KEY);
-    if((KASA_MSQID = msgget(key, IPC_CREAT|0600)) == FAILURE){
+void __create_cash_msq(){
+    key_t key = ftok(".", KEY_CASH);
+    if((CASH_MSQID = msgget(key, IPC_CREAT|0600)) == FAILURE){
         perror("main - msgget - kasa");
         exit(EXIT_FAILURE);
     }
@@ -41,5 +41,5 @@ void __create_kasa_msq(){
 
 void setup(){
     __set_shutdown_handler();
-    __create_kasa_msq();
+    __create_cash_msq();
 }

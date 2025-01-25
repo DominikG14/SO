@@ -12,10 +12,11 @@
 #include <signal.h>
 #include <stdbool.h>
 #include <errno.h>
+#include <pthread.h>
 
 
 // Process may or may not use it
-int KASA_MSQID;
+int CASH_MSQID;
 
 
 enum GLOBAL_STATE {
@@ -25,25 +26,32 @@ enum GLOBAL_STATE {
 
 
 enum GLOBAL_KEYS {
-    KASA_KEY,
-    ZAMKNIJ_BASENY_KEY,
+    KEY_CASH,
 };
 
 
-enum MSQ_KASA_STATE {
-    MSQ_KASA_WOLNA = 1,
-    MSQ_KASA_ZAPLATA,
-    MSQ_KASA_RACHUNEK,
+enum MSQ_CASH_STATE {
+    MSQ_CASH_EMPTY = 1,
+    MSQ_CASH_PAY,
+    MSQ_CASH_BILL,
 };
 
 
 enum SINGALS {
-    SIG_ZAMKNIJ_BASENY = SIGUSR1,
+    SIG_CLOSE_COMPLEX = SIGUSR1,
 };
 
 
+enum POOL_NAME {
+    OLIMPIC,
+    LEISURE,
+    PADDLING,
+};
 
-enum LOKACJA {
-    LOKACJA_KASA,
-    LOKACJA_BASEN,
+
+enum LOCATION {
+    LOCATION_CASH_QUEUE,
+    LOCATION_OLIMPIC_POOL,
+    LOCATION_LEISURE_POOL,
+    LOCATION_PADDLING_POOL,
 };
