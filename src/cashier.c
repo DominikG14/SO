@@ -1,4 +1,4 @@
-#include "kasjer.h"
+#include "cashier.h"
 
 
 int main(){

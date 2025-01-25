@@ -26,7 +26,11 @@ enum GLOBAL_STATE {
 
 
 enum GLOBAL_KEYS {
-    KEY_CASH,
+    KEY_CASH_MSQ,
+    
+    KEY_OLIMPIC_POOL_MSQ,
+    KEY_OLIMPIC_POOL_SEM,
+    KEY_OLIMPIC_POOL_SHM,
 };
 
 

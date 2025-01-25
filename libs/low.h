@@ -4,14 +4,14 @@
 
 
 // Processes
-const char* PS_CLIENT_PATH = "build/klient";
-const char* PS_CLIENT_NAME  = "./build/klient";
+const char* PS_CLIENT_PATH = "build/client";
+const char* PS_CLIENT_NAME  = "./build/client";
 
-const char* PS_CASHIER_PATH = "build/kasjer"; 
-const char* PS_CASHIER_NAME  = "./build/kasjer";
+const char* PS_CASHIER_PATH = "build/cashier"; 
+const char* PS_CASHIER_NAME  = "./build/cashier";
 
-const char* PS_LIFEGUARD_PATH = "build/ratownik"; 
-const char* PS_LIFEGUARD_NAME  = "./build/ratownik";
+const char* PS_LIFEGUARD_PATH = "build/lifeguard"; 
+const char* PS_LIFEGUARD_NAME  = "./build/lifeguard";
 
 
 // Message Queue

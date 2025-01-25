@@ -4,9 +4,10 @@
 #include "global.h"
 #include "colors.h"
 #include "random.h"
+#include "pools.h"
 
 
-// Struct
+// -------------------- Struct --------------------
 struct Client {
     int age;
     bool swim_cap_on;
@@ -21,7 +22,7 @@ struct Child {
 } typedef Child;
 
 
-// Config
+// -------------------- Config --------------------
 int CLIENT_SWIM_CAP_PREC = 30;
 int CLIENT_HAS_CHILD_PERC = 100;
 int CLIENT_MIN_AGE = 10;
@@ -35,13 +36,12 @@ int CHILD_BABY_AGE = 5;
 int CHILD_DIAPER_AGE = 3;
 
 
-// Local
-int OBECNA_LOKACJA;
+// -------------------- Local --------------------
 Client client;
 Child child;
 
 
-// Random generation
+// -------------------- Random generation --------------------
 bool rand_child(int client_age, int child_age){
     int child_perc = rand_int(1, 100);
     if(client_age - child_age >= 18 && child_perc <= CLIENT_HAS_CHILD_PERC){
@@ -65,7 +65,7 @@ int rand_swim_time(){
 }
 
 
-// Bool checks
+// -------------------- Bool checks --------------------
 bool client_is_underage(){
     return client.age < 18; 
 }
@@ -79,15 +79,21 @@ bool client_has_baby(){
 }
 
 
-// Child Functionality
-void* child_enter_cash_queue(){
+// -------------------- Child Functionality --------------------
+void* child_enter_cash_queue(void * thread_flags){
     printf_clr(green, "%d: dziecko weszlo do kolejki\n", getpid());
 
     pthread_exit(EXIT_SUCCESS);
 }
 
-void* child_leave_complex(){
-    switch(OBECNA_LOKACJA){
+void* child_leave_cash_queue(void * thread_flags){
+    printf_clr(green, "%d: dziecko opuscilo kolejke\n", getpid());
+
+    pthread_exit(EXIT_SUCCESS);
+}
+
+void* child_leave_pool(void* thread_flags){
+    switch(CLIENT_LOCATION){
         case LOCATION_CASH_QUEUE:
             printf_clr(green, "%d: dziecko opuscilo kase - zamkniecie kompleksu\n", getpid());
             break;
@@ -104,14 +110,16 @@ void* child_leave_complex(){
             printf_clr(green, "%d: dziecko opuscilo brodzik\n", getpid());
             break;
     }
+}
 
+
+void* child_leave_complex(void * thread_flags){
     printf_clr(green, "%d: dziecko opuscilo kompleks\n", getpid());
-
     pthread_exit(EXIT_SUCCESS);
 }
 
 
-// Client Functionality
+// -------------------- Client Functionality --------------------
 void cliet_set_data(){
     // Set child
     child.tid = -1;
@@ -139,10 +147,8 @@ void cliet_set_data(){
     }
 }
 
-
-// IPCS
-void __close_complex_handler(){
-    switch(OBECNA_LOKACJA){
+void client_leave_pool(){
+    switch(CLIENT_LOCATION){
         case LOCATION_CASH_QUEUE:
             printf_clr(blue, "%d: klient opuscil kase - zamkniecie kompleksu\n", getpid());
             break;
@@ -159,14 +165,46 @@ void __close_complex_handler(){
             printf_clr(blue, "%d: klient opuscil brodzik\n", getpid());
             break;
     }
+}
+
+void client_leave_complex(){
+    client_leave_pool();
 
     if(client_has_child()){
+        child.tid = new_thread(child_leave_pool, NULL);
+        pthread_join(child.tid, NULL);
+
         child.tid = new_thread(child_leave_complex, NULL);
         pthread_join(child.tid, NULL);
     }
 
     printf_clr(blue, "%d: klient opuscil kompleks basenow\n", getpid());   
     exit(EXIT_SUCCESS);
+}
+
+void client_choose_pool(){
+    if(client_has_baby()){
+        paddling_join_pool();
+    }
+
+    if(client_is_underage() || client_has_child()){
+        leisure_join_pool();
+    }
+
+
+    switch(rand_int(OLIMPIC, LEISURE)){
+        case OLIMPIC:
+            olimpic_join_pool();
+
+        case LEISURE:
+            leisure_join_pool();
+    }
+}
+
+
+// -------------------- IPCS --------------------
+void __close_complex_handler(){
+    client_leave_complex();
 }
 
 void __set_close_complex_handler(){
@@ -178,7 +216,7 @@ void __set_close_complex_handler(){
 }
 
 void __access_kasa_msq(){
-    key_t key = ftok(".", KEY_CASH);
+    key_t key = ftok(".", KEY_CASH_MSQ);
     if((CASH_MSQID = msgget(key, 0600)) == FAILURE){
         perror("klient - msgget");
         exit(EXIT_FAILURE);

@@ -37,6 +37,7 @@ int main(){
                 CLIENTS_NUM++;
         }
     }
+    sleep(1);
 
     // Zamknij kase
     kill(PID_CASHIER, SIG_CLOSE_COMPLEX);

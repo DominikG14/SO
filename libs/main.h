@@ -32,11 +32,16 @@ void __set_shutdown_handler(){
 }
 
 void __create_cash_msq(){
-    key_t key = ftok(".", KEY_CASH);
+    key_t key = ftok(".", KEY_CASH_MSQ);
     if((CASH_MSQID = msgget(key, IPC_CREAT|0600)) == FAILURE){
         perror("main - msgget - kasa");
         exit(EXIT_FAILURE);
     }
+}
+
+
+void __create_pools(){
+
 }
 
 void setup(){

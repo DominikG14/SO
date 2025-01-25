@@ -23,7 +23,7 @@ void __set_close_complex_handler(){
 }
 
 void __access_kasa_msq(){
-    key_t key = ftok(".", KEY_CASH);
+    key_t key = ftok(".", KEY_CASH_MSQ);
     if((CASH_MSQID = msgget(key, 0600)) == FAILURE){
         perror("kasjer - msgget");
         exit(EXIT_FAILURE);

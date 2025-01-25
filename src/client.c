@@ -1,4 +1,4 @@
-#include "klient.h"
+#include "client.h"
 
 
 int main(){
@@ -7,7 +7,7 @@ int main(){
 
 
     // Wejdz do kolejki
-    OBECNA_LOKACJA = LOCATION_CASH_QUEUE;
+    CLIENT_LOCATION = LOCATION_CASH_QUEUE;
     if(msgrcv(CASH_MSQID, &buffer, sizeof(buffer.mvalue), MSQ_CASH_EMPTY, 0) == FAILURE && errno != EINTR){
         perror("klient - msgrcv");
         exit(EXIT_FAILURE);
@@ -29,25 +29,14 @@ int main(){
         exit(EXIT_FAILURE);
     }
     printf_clr(blue, "%d: klient opuscil kolejke\n", getpid());
+    if(client_has_child()){
+        child.tid = new_thread(child_leave_cash_queue, NULL);
+        pthread_join(child.tid, NULL);
+    }
 
 
     // Wejdz do basenu
-    switch(rand_int(0, 2)){
-        case OLIMPIC:
-            OBECNA_LOKACJA = LOCATION_OLIMPIC_POOL;
-            printf_clr(blue, "%d: klient wszedl do basenu olimpijskiego\n", getpid());
-            break;
-        
-        case LEISURE:
-            OBECNA_LOKACJA = LOCATION_LEISURE_POOL;
-            printf_clr(blue, "%d: klient wszedl do basenu rekreacyjnego\n", getpid());
-            break;
-
-        case PADDLING:
-            OBECNA_LOKACJA = LOCATION_PADDLING_POOL;
-            printf_clr(blue, "%d: klient wszedl do brodziku\n", getpid());
-            break;
-    }
+    client_choose_pool();
 
     while(true); // plywa w basenie
 }
