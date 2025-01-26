@@ -395,16 +395,33 @@ void olimpic_access_pool(){
 
 void olimpic_join_pool(){
     olimpic_access_pool();
+    int* pool =(int*) shmat(OLIMPIC_POOL_SHMID, NULL, 0);
+    bool waited_in_queue = true; // If space in pool available skip the queue
+
+
+    SEM_OPERATE.sem_op = SEM_WAIT;
+    semop(OLIMPIC_POOL_SEMID, &SEM_OPERATE, 1);
+    POOL_SIZE = *pool;
+
+    if(POOL_SIZE < POOL_OLIMPIC_MAX_SIZE){
+        waited_in_queue = false;
+    }
+    else {
+        set_client_info(ACTION__ENTERED, LOCATION__OLIMPIC_QUEUE, REASON__NOT_ENOUGH_SPACE);
+        log_pool_data(olimpic_get_data, STATUS_NONE);
+    }
+
+    SEM_OPERATE.sem_op = SEM_SIGNAL;
+    semop(OLIMPIC_POOL_SEMID, &SEM_OPERATE, 1); 
 
 
     // Enter olimpic pool queue
-    set_client_info(ACTION__ENTERED, LOCATION__OLIMPIC_QUEUE, REASON__NONE), log_client(WHO__CLIENT);
     if(msgrcv(OLIMPIC_POOL_MSQID, &MSQ_BUFFER, sizeof(MSQ_BUFFER.mvalue), MSQ_POOL_SPACE, 0) == FAILURE && errno != EINTR){
         perror("klient - msgrcv");
         exit(EXIT_FAILURE);
     }
-    set_client_info(ACTION__LEFT, LOCATION__OLIMPIC_QUEUE, REASON__NONE), log_client(WHO__CLIENT);
-    int* pool =(int*) shmat(OLIMPIC_POOL_SHMID, NULL, 0);
+    if(waited_in_queue) set_client_info(ACTION__LEFT, LOCATION__OLIMPIC_QUEUE, REASON__SPACE_AVAILABLE), log_client(WHO__CLIENT);
+
 
 
     // Enter olimpic pool
@@ -412,7 +429,7 @@ void olimpic_join_pool(){
     semop(OLIMPIC_POOL_SEMID, &SEM_OPERATE, 1);
     *pool += 1;
     POOL_SIZE = *pool;
-    set_client_info(ACTION__ENTERED, LOCATION__OLIMPIC_POOL, REASON__SPACE_AVAILABLE);
+    set_client_info(ACTION__ENTERED, LOCATION__OLIMPIC_POOL, REASON__NONE);
     log_pool_data(olimpic_get_data, STATUS_ENTER);
 
     SEM_OPERATE.sem_op = SEM_SIGNAL;
