@@ -5,15 +5,15 @@
 #include "low.h"
 
 
-// Processes data
+// -------------------- Processes data --------------------
 int PID_CASHIER;
 
 int PID_CLIENTS[1000];
 int CLIENTS_NUM = 0;
 
 
-// IPCS
-void cleanup(){
+// -------------------- IPCS --------------------
+void clean_up(){
     // Cash
     msgctl(CASH_MSQID, IPC_RMID, NULL);
 
@@ -35,7 +35,7 @@ void cleanup(){
 
 
 void __shutdown_handler(int sig){
-    cleanup();
+    clean_up();
     printf_clr(red, "SHUTDOWN!");
     exit(EXIT_FAILURE);
 }
@@ -61,6 +61,7 @@ void __create_cash_msq(){
 
 void __create_pools(){
     key_t key_msq, key_sem, key_shm;
+    int* pool;
 
     // Olimpic pool
     key_msq = get_key(KEY_OLIMPIC_POOL_MSQ);
@@ -81,6 +82,9 @@ void __create_pools(){
         perror("main - shmget - pools");
         exit(EXIT_FAILURE);
     }
+    pool =(int*) shmat(OLIMPIC_POOL_SHMID, NULL, 0);
+    pool = 0;
+    shmdt(pool);
 
 
     // Leisure pool
@@ -102,6 +106,10 @@ void __create_pools(){
         perror("main - shmget - pools");
         exit(EXIT_FAILURE);
     }
+    pool =(int*) shmat(LEISURE_POOL_SHMID, NULL, 0);
+    pool[LEISURE_POOL_SIZE] = 0;
+    pool[LEISURE_POOL_AGE_SUM] = 0;
+    shmdt(pool);
 
 
     // Paddling pool
@@ -123,6 +131,9 @@ void __create_pools(){
         perror("main - shmget - pools");
         exit(EXIT_FAILURE);
     }
+    pool =(int*) shmat(PADDLING_POOL_SHMID, NULL, 0);
+    pool = 0;
+    shmdt(pool);
 }
 
 

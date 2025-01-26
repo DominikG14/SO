@@ -6,6 +6,8 @@ int pid;
 
 int main(){
     setup();
+    log_console(WHO__POOL_COMPLEX, ACTION__OPENED, LOCATION__POOL_COMPLEX, REASON__NONE);
+
 
     // Kasjer otwiera kase
     switch(PID_CASHIER = fork()){
@@ -37,7 +39,7 @@ int main(){
                 CLIENTS_NUM++;
         }
     }
-    sleep(1);
+
 
     // Zamknij kase
     kill(PID_CASHIER, SIG_CLOSE_COMPLEX);
@@ -52,6 +54,6 @@ int main(){
 
 
     // Wyczysc pamiec dzielona
-    cleanup();
+    clean_up();
     exit(EXIT_SUCCESS);
 }

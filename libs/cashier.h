@@ -3,13 +3,14 @@
 #include "low.h"
 #include "global.h"
 #include "colors.h"
+#include "logging.h"
 
 
-// Local
-bool CASH_OPEN= true;
+// -------------------- Local --------------------
+bool CASH_OPEN = true;
 
 
-// IPCS
+// -------------------- IPCS --------------------
 void __close_complex_handler(){
     CASH_OPEN = false;
 }

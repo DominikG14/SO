@@ -74,6 +74,11 @@ enum MSQ_CASH_STATE {
 };
 
 
+enum MSQ_POOL_STATE {
+    MSQ_POOL_SPACE = 1,
+};
+
+
 enum SINGALS {
     SIG_CLOSE_COMPLEX = SIGUSR1,
 };
@@ -83,4 +88,10 @@ enum POOL_NAME {
     OLIMPIC,
     LEISURE,
     PADDLING,
+};
+
+
+enum LEISURE_POOL_SHM {
+    LEISURE_POOL_SIZE,
+    LEISURE_POOL_AGE_SUM,
 };

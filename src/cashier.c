@@ -3,10 +3,12 @@
 
 int main(){
     setup();
-
     MsqBuffer buffer;
-    printf_clr(yellow, "%d: kasjer otworzyl kase\n", getpid());
+    log_console(WHO__CASHIER, ACTION__OPENED, LOCATION__CASH_QUEUE, REASON__NONE);
+
+
     while(CASH_OPEN){
+
         // Przyjmij klienta
         buffer.mtype=MSQ_CASH_EMPTY;
         if(msgsnd(CASH_MSQID, &buffer, sizeof(buffer.mvalue), 0) == FAILURE){
@@ -23,19 +25,18 @@ int main(){
             perror("kasjer - msgrcv - zaplata");
             exit(EXIT_FAILURE);
         }
-        printf_clr(yellow, "%d: kasjer otrzymal zaplate\n", getpid());
+        log_console(WHO__CASHIER, ACTION__RECIVED_PAY, LOCATION__CASH_QUEUE, REASON__NONE);
 
 
         // Wrecz paragon
-        printf_clr(yellow, "%d: kasjer wreczyl paragon\n", getpid());
         buffer.mtype=MSQ_CASH_BILL;
         if(msgsnd(CASH_MSQID, &buffer, sizeof(buffer.mvalue), 0) == FAILURE){
             perror("kasjer - msgsnd - paragon");
             exit(EXIT_FAILURE);
         }
     }
-    printf_clr(yellow, "%d: kasjer zamknal kase\n", getpid());
-    printf_clr(yellow, "%d: kasjer opuscil kompleks basenow\n", getpid());
 
+
+    log_console(WHO__CASHIER, ACTION__CLOSED, LOCATION__CASH_QUEUE, REASON__COMPLEX_CLOSED);
     exit(EXIT_SUCCESS);
 }

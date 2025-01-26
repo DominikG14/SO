@@ -4,8 +4,17 @@
 #include "global.h"
 #include "colors.h"
 #include "random.h"
-#include "pools.h"
+#include "logging.h"
 
+
+// -------------------- Func declaration --------------------
+void log_client(int WHO);
+void log_client_with_data(int WHO);
+void set_client_info(int ACTION, int LOCATION, int REASON);
+
+void olimpic_join_pool();
+void leisure_join_pool();
+void paddling_join_pool();
 
 // -------------------- Struct --------------------
 struct Client {
@@ -38,30 +47,12 @@ int CHILD_DIAPER_AGE = 3;
 
 
 // -------------------- Local --------------------
+int CLIENT_ACTION;
+int CLIENT_LOCATION;
+int CLIENT_REASON;
+
 Client client;
 Child child;
-
-
-// -------------------- Logging --------------------
-// void log_client(int WHO){
-//     log_console(
-//         WHO,
-//         CLIENT_LOCATION,
-//         CLIENT_ACTION,
-//         CLIENT_REASON
-//     );
-// }
-
-
-// void log_client_with_data(int WHO, char* (*data)()){
-//     log_console_with_data(
-//         WHO,
-//         CLIENT_LOCATION,
-//         CLIENT_ACTION,
-//         CLIENT_REASON,
-//         data
-//     );
-// }
 
 
 // -------------------- Random generation --------------------
@@ -140,16 +131,14 @@ char* child_get_data(){
 }
 
 
-void* child_enter_cash_queue(void * thread_flags){
-    printf_clr(green, "%d: dziecko weszlo do kolejki\n", getpid());
-
+void* child_enter_complex(void* thread_flags){
+    log_client_with_data(WHO__CHILD);
     pthread_exit(EXIT_SUCCESS);
 }
 
 
-void* child_leave_cash_queue(void * thread_flags){
-    printf_clr(green, "%d: dziecko opuscilo kolejke\n", getpid());
-
+void* child_keep_eye_on(void* thread_flags){
+    log_client(WHO__CHILD);
     pthread_exit(EXIT_SUCCESS);
 }
 
@@ -215,9 +204,7 @@ char* client_get_data(){
 
 void client_set_data(){
     // Set startup logging
-    CLIENT_LOCATION=LOCATION__CASH_QUEUE;
-    CLIENT_ACTION=ACTION__ENTERED;
-    CLIENT_REASON=REASON__NONE;
+    set_client_info(ACTION__ENTERED, LOCATION__POOL_COMPLEX, REASON__NONE);
 
     // Set child status
     child.tid = -1;
@@ -235,47 +222,22 @@ void client_set_data(){
             child.diaper_on = true;
         }
 
-        child.tid = new_thread(child_enter_cash_queue, NULL);
+        child.tid = new_thread(child_enter_complex, NULL);
         pthread_join(child.tid, NULL);
     }
 
-    printf_clr(blue, "%d: klient wszedl do kolejki\n", getpid());
-}
-
-
-void client_leave_pool(){
-    switch(CLIENT_LOCATION){
-        case LOCATION__CASH_QUEUE:
-            printf_clr(blue, "%d: klient opuscil kase - zamkniecie kompleksu\n", getpid());
-            break;
-        
-        case LOCATION__OLIMPIC_POOL:
-            printf_clr(blue, "%d: klient opuscil basen olimpijski\n", getpid());
-            break;
-        
-        case LOCATION__LEISURE_POOL:
-            printf_clr(blue, "%d: klient opuscil basen rekreacyjny\n", getpid());
-            break;
-
-        case LOCATION__PADDLING_POOL:
-            printf_clr(blue, "%d: klient opuscil brodzik\n", getpid());
-            break;
-    }
+    log_client_with_data(WHO__CLIENT);
 }
 
 
 void client_leave_complex(){
-    client_leave_pool();
+    set_client_info(ACTION__LEFT, LOG__DONT_CHANGE, REASON__COMPLEX_CLOSED), log_client(WHO__CLIENT);
 
     if(client_has_child()){
-        child.tid = new_thread(child_leave_pool, NULL);
-        pthread_join(child.tid, NULL);
-
-        child.tid = new_thread(child_leave_complex, NULL);
+        child.tid = new_thread(child_keep_eye_on, NULL);
         pthread_join(child.tid, NULL);
     }
 
-    printf_clr(blue, "%d: klient opuscil kompleks basenow\n", getpid());   
     exit(EXIT_SUCCESS);
 }
 
@@ -289,7 +251,6 @@ void client_choose_pool(){
         leisure_join_pool();
     }
 
-
     switch(rand_int(OLIMPIC, LEISURE)){
         case OLIMPIC:
             olimpic_join_pool();
@@ -297,6 +258,150 @@ void client_choose_pool(){
         case LEISURE:
             leisure_join_pool();
     }
+}
+
+
+// -------------------- Logging --------------------
+void log_client(int WHO){
+    log_console(
+        WHO,
+        CLIENT_ACTION,
+        CLIENT_LOCATION,
+        CLIENT_REASON
+    );
+}
+
+
+void log_client_with_data(int WHO){
+    char* (*data)() = NULL;
+
+    switch(WHO){
+        case WHO__CLIENT:
+            data = client_get_data;
+            break;
+        
+        case WHO__CHILD:
+            data = child_get_data;
+            break;
+    }
+
+    log_console_with_data(
+        WHO,
+        CLIENT_ACTION,
+        CLIENT_LOCATION,
+        CLIENT_REASON,
+        data
+    );
+}
+
+
+void set_client_info(int ACTION, int LOCATION, int REASON){
+    if(ACTION != LOG__DONT_CHANGE) CLIENT_ACTION = ACTION;
+    if(LOCATION != LOG__DONT_CHANGE) CLIENT_LOCATION = LOCATION;
+    if(REASON != LOG__DONT_CHANGE) CLIENT_REASON = REASON;
+}
+
+
+// -------------------- Olimpic pool --------------------
+void olimpic_access_shm(){
+    key_t key_msq, key_sem, key_shm;
+
+    key_msq = get_key(KEY_OLIMPIC_POOL_MSQ);
+    key_sem = get_key(KEY_OLIMPIC_POOL_SEM);
+    key_shm = get_key(KEY_OLIMPIC_POOL_SHM);
+
+    if((OLIMPIC_POOL_MSQID = msgget(key_msq, 0600)) == FAILURE){
+        perror("klient - msgget - pools");
+        exit(EXIT_FAILURE);
+    }
+
+    if((OLIMPIC_POOL_SEMID = semget(key_sem, SEM_POOL_NUM, 0600)) == FAILURE){
+        perror("klient - semget - pools");
+        exit(EXIT_FAILURE);
+    }
+
+    if((OLIMPIC_POOL_SHMID = shmget(key_shm, sizeof(int), 0600)) == FAILURE){
+        perror("klient - shmget - pools");
+        exit(EXIT_FAILURE);
+    }
+}
+
+
+void olimpic_join_pool(){
+    olimpic_access_shm();
+    set_client_info(ACTION__ENTERED, LOCATION__OLIMPIC_POOL, REASON__NONE), log_client(WHO__CLIENT);
+
+    while(true);
+}
+
+
+// -------------------- Leisure pool --------------------
+void leisure_access_shm(){
+    key_t key_msq, key_sem, key_shm;
+
+    key_msq = get_key(KEY_LEISURE_POOL_MSQ);
+    key_sem = get_key(KEY_LEISURE_POOL_SEM);
+    key_shm = get_key(KEY_LEISURE_POOL_SHM);
+
+    if((LEISURE_POOL_MSQID = msgget(key_msq, 0600)) == FAILURE){
+        perror("klient - msgget - pools");
+        exit(EXIT_FAILURE);
+    }
+
+    if((LEISURE_POOL_SEMID = semget(key_sem, SEM_POOL_NUM, 0600)) == FAILURE){
+        perror("klient - semget - pools");
+        exit(EXIT_FAILURE);
+    }
+
+    if((LEISURE_POOL_SHMID = shmget(key_shm, 2*sizeof(int), 0600)) == FAILURE){
+        perror("klient - shmget - pools");
+        exit(EXIT_FAILURE);
+    }
+}
+
+
+void leisure_join_pool(){
+    set_client_info(ACTION__ENTERED, LOCATION__LEISURE_POOL, REASON__NONE), log_client(WHO__CLIENT);
+    if(client_has_child()){
+        child.tid = new_thread(child_enter_complex, NULL);
+        pthread_join(child.tid, NULL);
+    }
+
+    while(true);
+}
+
+
+// -------------------- Paddling pool --------------------
+void paddling_access_shm(){
+    key_t key_msq, key_sem, key_shm;
+
+    key_msq = get_key(KEY_PADDLING_POOL_MSQ);
+    key_sem = get_key(KEY_PADDLING_POOL_SEM);
+    key_shm = get_key(KEY_PADDLING_POOL_SHM);
+
+    if((PADDLING_POOL_MSQID = msgget(key_msq, 0600)) == FAILURE){
+        perror("main - msgget - pools");
+        exit(EXIT_FAILURE);
+    }
+
+    if((PADDLING_POOL_SEMID = semget(key_sem, SEM_POOL_NUM, 0600)) == FAILURE){
+        perror("main - semget - pools");
+        exit(EXIT_FAILURE);
+    }
+
+    if((PADDLING_POOL_SHMID = shmget(key_shm, sizeof(int), 0600)) == FAILURE){
+        perror("main - shmget - pools");
+        exit(EXIT_FAILURE);
+    }
+}
+
+
+void paddling_join_pool(){
+    set_client_info(ACTION__ENTERED, LOCATION__PADDLING_POOL, REASON__NONE), log_client(WHO__CLIENT);
+    child.tid = new_thread(child_enter_complex, NULL);
+    pthread_join(child.tid, NULL);
+
+    while(true);
 }
 
 
