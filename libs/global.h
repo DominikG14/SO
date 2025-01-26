@@ -38,11 +38,6 @@ int POOL_AGE_SUM; // For leisure pool age avg
 
 
 // Config
-int POOL_OLIMPIC_MAX_SIZE = 5;
-int POOL_LEISURE_MAX_SIZE = 5;
-int POOL_PADDLING_MAX_SIZE = 5;
-
-int POOL_LEISURE_AGE_AVG = 40;
 
 
 // Message Queue
@@ -63,12 +58,6 @@ enum SEM__OPERATIONS {
 };
 
 char* LOGGING_FILEPATH = "./logs";
-
-
-enum GLOBAL_STATE {
-    SUCCESS = 0,
-    FAILURE = -1,
-};
 
 
 enum CLIENT_POOL_ACTION {

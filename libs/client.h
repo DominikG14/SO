@@ -5,6 +5,7 @@
 #include "colors.h"
 #include "random.h"
 #include "logging.h"
+#include "config.h"
 
 
 // -------------------- Func declaration --------------------
@@ -955,6 +956,7 @@ void __access_kasa_msq(){
 
 void setup(){
     srand(getpid());
+    set_config_vars();
     __set_close_complex_handler();
     __access_kasa_msq();
     client_set_data();

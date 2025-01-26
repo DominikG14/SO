@@ -4,6 +4,7 @@
 #include "global.h"
 #include "colors.h"
 #include "logging.h"
+#include "config.h"
 
 
 // -------------------- Local --------------------
@@ -36,6 +37,6 @@ void __access_kasa_msq(){
 
 void setup(){
     __set_close_complex_handler();
+    set_config_vars();
     __access_kasa_msq();
-
 }

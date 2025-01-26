@@ -3,6 +3,12 @@
 #include "global.h"
 
 
+enum GLOBAL_STATE {
+    SUCCESS = 0,
+    FAILURE = -1,
+};
+
+
 // Processes
 const char* PS_CLIENT_PATH = "build/client";
 const char* PS_CLIENT_NAME  = "./build/client";
@@ -12,7 +18,6 @@ const char* PS_CASHIER_NAME  = "./build/cashier";
 
 const char* PS_LIFEGUARD_PATH = "build/lifeguard"; 
 const char* PS_LIFEGUARD_NAME  = "./build/lifeguard";
-
 
 // Keys
 const char* KEY_PATH = ".";
