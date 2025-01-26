@@ -141,6 +141,8 @@ void __create_pools(){
         perror("main - semget - pools");
         exit(EXIT_FAILURE);
     }
+    SEM_OPERATE.sem_op = SEM_SIGNAL;
+    semop(LEISURE_POOL_SEMID, &SEM_OPERATE, 1);
         // For size and age_sum
     if((LEISURE_POOL_SHMID = shmget(key_shm, 2*sizeof(int), IPC_CREAT|0600)) == FAILURE){
         perror("main - shmget - pools");

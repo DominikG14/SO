@@ -34,12 +34,15 @@ int PADDLING_POOL_SEMID;
 int PADDLING_POOL_SHMID;
 
 int POOL_SIZE; // Current pool size for logging
+int POOL_AGE_SUM; // For leisure pool age avg
 
 
 // Config
 int POOL_OLIMPIC_MAX_SIZE = 5;
 int POOL_LEISURE_MAX_SIZE = 5;
 int POOL_PADDLING_MAX_SIZE = 5;
+
+int POOL_LEISURE_AGE_AVG = 40;
 
 
 // Message Queue

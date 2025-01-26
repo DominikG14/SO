@@ -41,7 +41,7 @@ struct ChildPoolData {
 
 // -------------------- Config --------------------
 int CLIENT_SWIM_CAP_PREC = 30;
-int CLIENT_HAS_CHILD_PERC = 100;
+int CLIENT_HAS_CHILD_PERC = 0;
 int CLIENT_MIN_AGE = 30;
 int CLIENT_MAX_AGE = 70;
 int CLIENT_MIN_SWIM_TIME = 1;
@@ -470,6 +470,86 @@ void olimpic_join_pool(){
 
 
 // -------------------- Leisure pool --------------------
+double leisure_age_avg(int add_age, int add_size){
+    int age_sum = POOL_AGE_SUM + add_age;
+    int size_sum = POOL_SIZE + add_size;
+
+    double age_avg;
+    if(size_sum != 0){
+        age_avg =(double) age_sum / size_sum;
+    }
+    else age_avg = 0;
+
+    return age_avg;
+}
+
+
+char* leisure_get_data(int status){
+    int age;
+    if(client_has_child()) age = client.age + child.age;
+    else age = client.age;
+
+
+    printf_clr(cyan, "| ");
+    switch(status){
+        case STATUS_ENTER:
+            printf("size: %d/%d (prev: %d/%d)", POOL_SIZE, POOL_LEISURE_MAX_SIZE, POOL_SIZE - 1, POOL_LEISURE_MAX_SIZE);
+            printf_clr(cyan, " | ");
+            printf("age_sum: %d (prev: %d)", POOL_AGE_SUM, POOL_AGE_SUM - age);
+            printf_clr(cyan, " | ");
+            printf("age_avg: %.2f/%d (prev: %.2f/%d)", leisure_age_avg(0, 0), POOL_LEISURE_AGE_AVG, leisure_age_avg(-age, -1), POOL_LEISURE_AGE_AVG);
+            break;
+
+        case STATUS_LEAVE:
+            printf("size: %d/%d (prev: %d/%d)", POOL_SIZE, POOL_LEISURE_MAX_SIZE, POOL_SIZE + 1, POOL_LEISURE_MAX_SIZE);
+            printf_clr(cyan, " | ");
+            printf("age_sum: %d (prev: %d)", POOL_AGE_SUM, POOL_AGE_SUM + age);
+            printf_clr(cyan, " | ");
+            printf("age_avg: %.2f/%d (prev: %.2f/%d)", leisure_age_avg(0, 0), POOL_LEISURE_AGE_AVG, leisure_age_avg(age, 1), POOL_LEISURE_AGE_AVG);
+            break;
+
+        case STATUS_NONE:
+            printf("size: %d/%d", POOL_SIZE, POOL_LEISURE_MAX_SIZE);
+            printf_clr(cyan, " | ");
+            printf("age_sum: %d", POOL_AGE_SUM);
+            printf_clr(cyan, " | ");
+            printf("age_avg: %.2f/%d (new: %.2f/%d)", leisure_age_avg(0, 0), POOL_LEISURE_AGE_AVG, leisure_age_avg(age, 1), POOL_LEISURE_AGE_AVG);
+    }
+    printf_clr(cyan, " |");
+
+
+    // log to file
+    char* data =(char*) malloc(4096);
+    switch(status){
+        case STATUS_ENTER:
+            sprintf(data, "| size: %d/%d (prev: %d/%d) | age_sum: %d (prev: %d) | age_avg: %.2f/%d (prev: %.2f/%d) |",
+                POOL_SIZE, POOL_LEISURE_MAX_SIZE, POOL_SIZE - 1, POOL_LEISURE_MAX_SIZE,
+                POOL_AGE_SUM, POOL_AGE_SUM - age,
+                leisure_age_avg(0, 0), POOL_LEISURE_AGE_AVG, leisure_age_avg(-age, -1), POOL_LEISURE_AGE_AVG
+            );
+            break;
+
+        case STATUS_LEAVE:
+            sprintf(data, "| size: %d/%d (prev: %d/%d) | age_sum: %d (prev: %d) | age_avg: %.2f/%d (prev: %.2f/%d) |",
+                POOL_SIZE, POOL_LEISURE_MAX_SIZE, POOL_SIZE + 1, POOL_LEISURE_MAX_SIZE,
+                POOL_AGE_SUM, POOL_AGE_SUM + age,
+                leisure_age_avg(0, 0), POOL_LEISURE_AGE_AVG, leisure_age_avg(age, 1), POOL_LEISURE_AGE_AVG
+            );
+            break;
+
+        case STATUS_NONE:
+            sprintf(data, "| size: %d/%d | age_sum: %d | age_avg: %.2f/%d (new: %.2f/%d) |",
+                POOL_SIZE, POOL_LEISURE_MAX_SIZE,
+                POOL_AGE_SUM,
+                leisure_age_avg(0, 0), POOL_LEISURE_AGE_AVG, leisure_age_avg(age, 1), POOL_LEISURE_AGE_AVG
+            );
+    }
+
+
+    return data;
+}
+
+
 void leisure_access_pool(){
     SEM_OPERATE.sem_flg = 0;
     SEM_OPERATE.sem_num = SEM_POOL_SHM;
@@ -498,13 +578,125 @@ void leisure_access_pool(){
 
 
 void leisure_join_pool(){
-    set_client_info(ACTION__ENTERED, LOCATION__LEISURE_POOL, REASON__NONE), log_client(WHO__CLIENT);
-    if(client_has_child()){
-        child.tid = new_thread(child_enter_complex, NULL);
-        pthread_join(child.tid, NULL);
+    leisure_access_pool();
+    int* pool =(int*) shmat(LEISURE_POOL_SHMID, NULL, 0);
+    bool wait_in_queue  = true; // If space in pool available skip the queue
+    bool enough_space   = false;
+    bool age_belowe_avg = false;
+    int reason; // Reason why entered the queue
+
+
+    SEM_OPERATE.sem_op = SEM_WAIT;
+    semop(LEISURE_POOL_SEMID, &SEM_OPERATE, 1);
+    POOL_SIZE = pool[LEISURE_POOL_SIZE];
+    POOL_AGE_SUM = pool[LEISURE_POOL_AGE_SUM];
+
+    switch(client_has_child()){
+        case true:
+            // TODO
+            break;
+        
+        case false:
+            if(POOL_SIZE < POOL_LEISURE_MAX_SIZE){
+                enough_space = true;
+            }
+
+            if(leisure_age_avg(client.age, 1) <= POOL_LEISURE_AGE_AVG){
+                age_belowe_avg = true;
+            }
+
+            if(enough_space && age_belowe_avg){
+                wait_in_queue = false;
+            } 
+            else {
+                if(!enough_space) reason = REASON__NOT_ENOUGH_SPACE;
+                else reason = REASON__AGE_ABOVE_AVG;
+                set_client_info(ACTION__ENTERED, LOCATION__LEISURE_QUEUE, reason);
+                log_pool_data(leisure_get_data, STATUS_NONE, WHO__CLIENT);
+            }
+            break;
     }
 
-    while(true);
+     // Enter leisure pool queue
+    if(wait_in_queue){
+        SEM_OPERATE.sem_op = SEM_SIGNAL;
+        semop(LEISURE_POOL_SEMID, &SEM_OPERATE, 1);
+
+        while(true){
+            enough_space = false;
+            age_belowe_avg = false;
+
+            SEM_OPERATE.sem_op = SEM_WAIT;
+            semop(LEISURE_POOL_SEMID, &SEM_OPERATE, 1);
+            POOL_SIZE = pool[LEISURE_POOL_SIZE];
+            POOL_AGE_SUM = pool[LEISURE_POOL_AGE_SUM];
+
+            switch(client_has_child()){
+                case true:
+                    if(POOL_LEISURE_MAX_SIZE - POOL_SIZE >= 2){
+                        enough_space = true;
+                    }
+
+                    if(leisure_age_avg(client.age + child.age, 2) <= POOL_LEISURE_AGE_AVG){
+                        age_belowe_avg = true;
+                    }
+                    break;
+                
+                case false:
+                    if(POOL_SIZE < POOL_LEISURE_MAX_SIZE){
+                        enough_space = true;
+                    }
+
+                    if(leisure_age_avg(client.age, 1) <= POOL_LEISURE_AGE_AVG){
+                        age_belowe_avg = true;
+                    }
+                    break;
+            }
+
+            if(enough_space && age_belowe_avg){
+                if(reason == REASON__NOT_ENOUGH_SPACE) reason = REASON__SPACE_AVAILABLE;
+                else reason = REASON__AGE_BELOW_AVG;
+
+                set_client_info(ACTION__LEFT, LOCATION__LEISURE_QUEUE, reason);
+                log_pool_data(leisure_get_data, STATUS_NONE, WHO__CLIENT);
+                break;
+            }
+            else {
+                // Go back to the end of the queue and make space for others
+                SEM_OPERATE.sem_op = SEM_SIGNAL;
+                semop(LEISURE_POOL_SEMID, &SEM_OPERATE, 1);
+            }
+        }
+    }
+
+    // Enter leisure pool
+    pool[LEISURE_POOL_SIZE] += 1;
+    pool[LEISURE_POOL_AGE_SUM] += client.age;
+    POOL_SIZE = pool[LEISURE_POOL_SIZE];
+    POOL_AGE_SUM = pool[LEISURE_POOL_AGE_SUM];
+    set_client_info(ACTION__ENTERED, LOCATION__LEISURE_POOL, REASON__NONE);
+    log_pool_data(leisure_get_data, STATUS_ENTER, WHO__CLIENT);
+
+    SEM_OPERATE.sem_op = SEM_SIGNAL;
+    semop(LEISURE_POOL_SEMID, &SEM_OPERATE, 1);
+
+
+    // Make space for others
+    SEM_OPERATE.sem_op = SEM_WAIT;
+    semop(LEISURE_POOL_SEMID, &SEM_OPERATE, 1);
+
+    pool[LEISURE_POOL_SIZE] -= 1;
+    pool[LEISURE_POOL_AGE_SUM] -= client.age;
+    POOL_SIZE = pool[LEISURE_POOL_SIZE];
+    POOL_AGE_SUM = pool[LEISURE_POOL_AGE_SUM];
+    set_client_info(ACTION__LEFT, LOCATION__LEISURE_POOL, REASON__END_OF_SWIM_TIME);
+    log_pool_data(leisure_get_data, STATUS_LEAVE, WHO__CLIENT);
+    shmdt(pool);
+
+    SEM_OPERATE.sem_op = SEM_SIGNAL;
+    semop(LEISURE_POOL_SEMID, &SEM_OPERATE, 1);
+
+    exit(EXIT_SUCCESS);
 }
 
 

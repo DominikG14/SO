@@ -12,6 +12,8 @@ enum REASON_ABBR {
     REASON__END_OF_SWIM_TIME,
     REASON__NOT_ENOUGH_SPACE,
     REASON__SPACE_AVAILABLE,
+    REASON__AGE_ABOVE_AVG,
+    REASON__AGE_BELOW_AVG,
 
     REASON__CASH_CLOSED,
     REASON__PAYMENT_FINISHED,
@@ -25,6 +27,8 @@ const char* REASON_NAME[] = {
     "END_OF_SWIM_TIME",
     "NOT_ENOUGH_SPACE",
     "SPACE_AVAILABLE",
+    "AGE_ABOVE_AVG",
+    "AGE_BELOW_AVG",
 
     "CASH_CLOSED",
     "PAYMENT_FINISHED",
@@ -38,6 +42,8 @@ void (*REASON_CLR[])() = {
     blue,
     red,
     green,
+    magenta,
+    magenta,
 
     red,
     yellow,
