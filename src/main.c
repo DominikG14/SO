@@ -41,7 +41,7 @@ int main(){
         }
     }
 
-    sleep(3);
+    sleep(2);
     log_console(WHO__POOL_COMPLEX, ACTION__CLOSED, LOCATION__POOL_COMPLEX, REASON__NONE);
 
     // Close cash

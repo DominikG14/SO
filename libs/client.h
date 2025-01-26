@@ -181,33 +181,6 @@ void* child_paddling_pool(void* thread_flags){
 }
 
 
-void* child_leave_pool(void* thread_flags){
-    switch(CLIENT_LOCATION){
-        case LOCATION__CASH_QUEUE:
-            printf_clr(green, "%d: dziecko opuscilo kase - zamkniecie kompleksu\n", getpid());
-            break;
-        
-        case LOCATION__OLIMPIC_POOL:
-            printf_clr(green, "%d: dziecko opuscilo basen olimpijski\n", getpid());
-            break;
-        
-        case LOCATION__LEISURE_POOL:
-            printf_clr(green, "%d: dziecko opuscilo basen rekreacyjny\n", getpid());
-            break;
-
-        case LOCATION__PADDLING_POOL:
-            printf_clr(green, "%d: dziecko opuscilo brodzik\n", getpid());
-            break;
-    }
-}
-
-
-void* child_leave_complex(void * thread_flags){
-    printf_clr(green, "%d: dziecko opuscilo kompleks\n", getpid());
-    pthread_exit(EXIT_SUCCESS);
-}
-
-
 // -------------------- Client Functionality --------------------
 char* client_get_data(){
     // Client Age
