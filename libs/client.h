@@ -41,8 +41,8 @@ struct ChildPoolData {
 
 // -------------------- Config --------------------
 int CLIENT_SWIM_CAP_PREC = 30;
-int CLIENT_HAS_CHILD_PERC = 0;
-int CLIENT_MIN_AGE = 30;
+int CLIENT_HAS_CHILD_PERC = 30;
+int CLIENT_MIN_AGE = 10;
 int CLIENT_MAX_AGE = 70;
 int CLIENT_MIN_SWIM_TIME = 1;
 int CLIENT_MAX_SWIM_TIME = 3;
@@ -174,6 +174,29 @@ void* child_paddling_pool(void* thread_flags){
     }
 
     POOL_SIZE = *pool;
+    shmdt(pool);
+
+    log_pool_data(cpd->get_pool_data, cpd->status, WHO__CHILD);
+    pthread_exit(EXIT_SUCCESS);
+}
+
+
+void* child_leisure_pool(void* thread_flags){
+    ChildPoolData* cpd =(ChildPoolData*) thread_flags;
+
+    int* pool =(int*) shmat(LEISURE_POOL_SHMID, NULL, 0);
+
+    switch(cpd->status){
+        case STATUS_ENTER:
+            pool[LEISURE_POOL_SIZE] += 1;
+            break;
+        
+        case STATUS_LEAVE:
+            pool[LEISURE_POOL_SIZE] -= 1;
+            break;
+    }
+
+    POOL_SIZE = pool[LEISURE_POOL_SIZE];
     shmdt(pool);
 
     log_pool_data(cpd->get_pool_data, cpd->status, WHO__CHILD);
@@ -579,6 +602,9 @@ void leisure_access_pool(){
 
 void leisure_join_pool(){
     leisure_access_pool();
+    ChildPoolData cpd;
+    cpd.get_pool_data = leisure_get_data;
+
     int* pool =(int*) shmat(LEISURE_POOL_SHMID, NULL, 0);
     bool wait_in_queue  = true; // If space in pool available skip the queue
     bool enough_space   = false;
@@ -593,8 +619,28 @@ void leisure_join_pool(){
 
     switch(client_has_child()){
         case true:
-            // TODO
-            break;
+            if(POOL_LEISURE_MAX_SIZE - POOL_SIZE >= 2){
+                enough_space = true;
+            }
+
+            if(leisure_age_avg(client.age + child.age, 2) <= POOL_LEISURE_AGE_AVG){
+                age_belowe_avg = true;
+            }
+
+            if(enough_space && age_belowe_avg){
+                wait_in_queue = false;
+            } 
+            else {
+                if(!enough_space) reason = REASON__NOT_ENOUGH_SPACE;
+                else reason = REASON__AGE_ABOVE_AVG;
+                set_client_info(ACTION__ENTERED, LOCATION__LEISURE_QUEUE, reason);
+                log_pool_data(leisure_get_data, STATUS_NONE, WHO__CLIENT);
+
+                cpd.status = STATUS_NONE;
+                child.tid = new_thread(child_keep_eye_pool, &cpd);
+                pthread_join(child.tid, NULL);
+            }
+        break;
         
         case false:
             if(POOL_SIZE < POOL_LEISURE_MAX_SIZE){
@@ -614,7 +660,7 @@ void leisure_join_pool(){
                 set_client_info(ACTION__ENTERED, LOCATION__LEISURE_QUEUE, reason);
                 log_pool_data(leisure_get_data, STATUS_NONE, WHO__CLIENT);
             }
-            break;
+        break;
     }
 
      // Enter leisure pool queue
@@ -659,6 +705,12 @@ void leisure_join_pool(){
 
                 set_client_info(ACTION__LEFT, LOCATION__LEISURE_QUEUE, reason);
                 log_pool_data(leisure_get_data, STATUS_NONE, WHO__CLIENT);
+
+                if(client_has_child()){
+                    cpd.status = STATUS_NONE;
+                    child.tid = new_thread(child_keep_eye_pool, &cpd);
+                    pthread_join(child.tid, NULL);
+                }
                 break;
             }
             else {
@@ -670,12 +722,22 @@ void leisure_join_pool(){
     }
 
     // Enter leisure pool
+    // Here semaphore is still open from beggining or queue
     pool[LEISURE_POOL_SIZE] += 1;
     pool[LEISURE_POOL_AGE_SUM] += client.age;
     POOL_SIZE = pool[LEISURE_POOL_SIZE];
     POOL_AGE_SUM = pool[LEISURE_POOL_AGE_SUM];
+
     set_client_info(ACTION__ENTERED, LOCATION__LEISURE_POOL, REASON__NONE);
+    if(client_has_child()){
+        pool[LEISURE_POOL_AGE_SUM] += child.age;
+        POOL_AGE_SUM = pool[LEISURE_POOL_AGE_SUM];
+        cpd.status = STATUS_ENTER;
+        child.tid = new_thread(child_leisure_pool, &cpd);
+        pthread_join(child.tid, NULL);
+    }
     log_pool_data(leisure_get_data, STATUS_ENTER, WHO__CLIENT);
+ 
 
     SEM_OPERATE.sem_op = SEM_SIGNAL;
     semop(LEISURE_POOL_SEMID, &SEM_OPERATE, 1);
@@ -689,8 +751,20 @@ void leisure_join_pool(){
     pool[LEISURE_POOL_AGE_SUM] -= client.age;
     POOL_SIZE = pool[LEISURE_POOL_SIZE];
     POOL_AGE_SUM = pool[LEISURE_POOL_AGE_SUM];
+
     set_client_info(ACTION__LEFT, LOCATION__LEISURE_POOL, REASON__END_OF_SWIM_TIME);
+
+    if(client_has_child()){
+        pool[LEISURE_POOL_AGE_SUM] -= child.age;
+        POOL_AGE_SUM = pool[LEISURE_POOL_AGE_SUM];
+        cpd.status = STATUS_LEAVE;
+        child.tid = new_thread(child_leisure_pool, &cpd);
+        pthread_join(child.tid, NULL);
+    }
+
     log_pool_data(leisure_get_data, STATUS_LEAVE, WHO__CLIENT);
+
+
     shmdt(pool);
 
     SEM_OPERATE.sem_op = SEM_SIGNAL;
