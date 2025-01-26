@@ -12,6 +12,46 @@ int PID_CLIENTS[1000];
 int CLIENTS_NUM = 0;
 
 
+// -------------------- Pool Complex functionality --------------------
+void open_pools(){
+    MSQ_BUFFER.mtype=MSQ_POOL_SPACE;
+
+
+    // Olimpic pool
+            // Each client comes alone
+    for(int i = 0; i < POOL_OLIMPIC_MAX_SIZE; i++){
+        if(msgsnd(OLIMPIC_POOL_MSQID, &MSQ_BUFFER, sizeof(MSQ_BUFFER.mvalue), 0) == FAILURE){
+            perror("main - msgsnd - open_pool");
+            exit(EXIT_FAILURE);
+        }
+    }
+    semctl(OLIMPIC_POOL_SEMID, SEM_POOL_SHM, SETVAL, SEM_SIGNAL);
+
+
+    // Leisure pool
+            // Clients come with childs or alone
+    for(int i = 0; i < POOL_LEISURE_MAX_SIZE; i++){
+        if(msgsnd(LEISURE_POOL_MSQID, &MSQ_BUFFER, sizeof(MSQ_BUFFER.mvalue), 0) == FAILURE){
+            perror("main - msgsnd - open_pool");
+            exit(EXIT_FAILURE);
+        }
+    }
+    semctl(LEISURE_POOL_SEMID, SEM_POOL_SHM, SETVAL, SEM_SIGNAL);
+
+
+    // Paddling pool
+            // Each client comes with a child
+    for(int i = 0; i < POOL_PADDLING_MAX_SIZE / 2; i++){
+        if(msgsnd(PADDLING_POOL_MSQID, &MSQ_BUFFER, sizeof(MSQ_BUFFER.mvalue), 0) == FAILURE){
+            perror("main - msgsnd - open_pool");
+            exit(EXIT_FAILURE);
+        }
+    }
+    semctl(PADDLING_POOL_SEMID, SEM_POOL_SHM, SETVAL, SEM_SIGNAL);
+
+}
+
+
 // -------------------- IPCS --------------------
 void clean_up(){
     // Cash

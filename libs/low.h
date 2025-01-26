@@ -14,13 +14,6 @@ const char* PS_LIFEGUARD_PATH = "build/lifeguard";
 const char* PS_LIFEGUARD_NAME  = "./build/lifeguard";
 
 
-// Message Queue
-struct MSQ_BUFFER {
-	long mtype;
-	int  mvalue;
-} typedef MsqBuffer;
-
-
 // Keys
 const char* KEY_PATH = ".";
 

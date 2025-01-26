@@ -3,22 +3,21 @@
 
 int main(){
     setup();
-    MsqBuffer buffer;
     log_console(WHO__CASHIER, ACTION__OPENED, LOCATION__CASH_QUEUE, REASON__NONE);
 
 
     while(CASH_OPEN){
 
         // Przyjmij klienta
-        buffer.mtype=MSQ_CASH_EMPTY;
-        if(msgsnd(CASH_MSQID, &buffer, sizeof(buffer.mvalue), 0) == FAILURE){
+        MSQ_BUFFER.mtype=MSQ_CASH_EMPTY;
+        if(msgsnd(CASH_MSQID, &MSQ_BUFFER, sizeof(MSQ_BUFFER.mvalue), 0) == FAILURE){
             perror("kasjer - msgsnd - klienta");
             exit(EXIT_FAILURE);
         }
 
 
         // Przyjmij zaplate
-        if(msgrcv(CASH_MSQID, &buffer, sizeof(buffer.mvalue), MSQ_CASH_PAY, 0) == FAILURE){
+        if(msgrcv(CASH_MSQID, &MSQ_BUFFER, sizeof(MSQ_BUFFER.mvalue), MSQ_CASH_PAY, 0) == FAILURE){
             if(errno == EINTR){
                 continue;
             }
@@ -29,8 +28,8 @@ int main(){
 
 
         // Wrecz paragon
-        buffer.mtype=MSQ_CASH_BILL;
-        if(msgsnd(CASH_MSQID, &buffer, sizeof(buffer.mvalue), 0) == FAILURE){
+        MSQ_BUFFER.mtype=MSQ_CASH_BILL;
+        if(msgsnd(CASH_MSQID, &MSQ_BUFFER, sizeof(MSQ_BUFFER.mvalue), 0) == FAILURE){
             perror("kasjer - msgsnd - paragon");
             exit(EXIT_FAILURE);
         }

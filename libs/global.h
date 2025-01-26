@@ -20,6 +20,7 @@
 
 // Local for each process (they may use it or not)
 int CASH_MSQID;
+
 int OLIMPIC_POOL_MSQID;
 int OLIMPIC_POOL_SEMID;
 int OLIMPIC_POOL_SHMID;
@@ -32,6 +33,31 @@ int PADDLING_POOL_MSQID;
 int PADDLING_POOL_SEMID;
 int PADDLING_POOL_SHMID;
 
+int POOL_SIZE; // Current pool size for logging
+
+
+// Config
+int POOL_OLIMPIC_MAX_SIZE = 5;
+int POOL_LEISURE_MAX_SIZE = 5;
+int POOL_PADDLING_MAX_SIZE = 5;
+
+
+// Message Queue
+struct MsqBuffer {
+	long mtype;
+	int  mvalue;
+} typedef MsqBuffer;
+
+MsqBuffer MSQ_BUFFER; // Local buffer for each process
+
+
+// Semaphore 
+struct sembuf SEM_OPERATE;
+
+enum SEM__OPERATIONS {
+    SEM_WAIT = -1,
+    SEM_SIGNAL = 1
+};
 
 char* LOGGING_FILEPATH = "./logs";
 
@@ -39,6 +65,13 @@ char* LOGGING_FILEPATH = "./logs";
 enum GLOBAL_STATE {
     SUCCESS = 0,
     FAILURE = -1,
+};
+
+
+enum CLIENT_POOL_ACTION {
+    STATUS_ENTER,
+    STATUS_LEAVE,
+    STATUS_NONE,
 };
 
 

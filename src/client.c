@@ -3,8 +3,6 @@
 
 int main(){
     setup();
-    MsqBuffer buffer;
-
 
     // Wejdz do kolejki
     set_client_info(ACTION__ENTERED, LOCATION__CASH_QUEUE, REASON__NONE), log_client(WHO__CLIENT);
@@ -12,7 +10,7 @@ int main(){
         child.tid = new_thread(child_keep_eye_on, NULL);
         pthread_join(child.tid, NULL);
     }
-    if(msgrcv(CASH_MSQID, &buffer, sizeof(buffer.mvalue), MSQ_CASH_EMPTY, 0) == FAILURE && errno != EINTR){
+    if(msgrcv(CASH_MSQID, &MSQ_BUFFER, sizeof(MSQ_BUFFER.mvalue), MSQ_CASH_EMPTY, 0) == FAILURE && errno != EINTR){
         perror("klient - msgrcv");
         exit(EXIT_FAILURE);
     }
@@ -20,15 +18,15 @@ int main(){
 
     // Wrecz zaplate
     set_client_info(ACTION__PAID, LOCATION__CASH_QUEUE, REASON__NONE), log_client(WHO__CLIENT);
-    buffer.mtype=MSQ_CASH_PAY;
-    if(msgsnd(CASH_MSQID, &buffer, sizeof(buffer.mvalue), 0) == FAILURE){
+    MSQ_BUFFER.mtype=MSQ_CASH_PAY;
+    if(msgsnd(CASH_MSQID, &MSQ_BUFFER, sizeof(MSQ_BUFFER.mvalue), 0) == FAILURE){
         perror("klient - msgsnd");
         exit(EXIT_FAILURE);
     }
 
 
     // Czekaj na paragon
-    if(msgrcv(CASH_MSQID, &buffer, sizeof(buffer.mvalue), MSQ_CASH_BILL, 0) == FAILURE && errno != EINTR){
+    if(msgrcv(CASH_MSQID, &MSQ_BUFFER, sizeof(MSQ_BUFFER.mvalue), MSQ_CASH_BILL, 0) == FAILURE && errno != EINTR){
         perror("klient - msgrcv");
         exit(EXIT_FAILURE);
     }

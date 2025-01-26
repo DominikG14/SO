@@ -8,6 +8,7 @@ int main(){
     setup();
     log_console(WHO__POOL_COMPLEX, ACTION__OPENED, LOCATION__POOL_COMPLEX, REASON__NONE);
 
+    open_pools();
 
     // Kasjer otwiera kase
     switch(PID_CASHIER = fork()){
@@ -40,6 +41,8 @@ int main(){
         }
     }
 
+    sleep(3);
+    log_console(WHO__POOL_COMPLEX, ACTION__CLOSED, LOCATION__POOL_COMPLEX, REASON__NONE);
 
     // Zamknij kase
     kill(PID_CASHIER, SIG_CLOSE_COMPLEX);
