@@ -1,4 +1,5 @@
 .vscode
 build
 tmp
+logs
 TODO.md

@@ -1,5 +1,5 @@
 #include "main.h"
-
+#include "logging.h"
 
 int pid;
 

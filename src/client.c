@@ -7,7 +7,6 @@ int main(){
 
 
     // Wejdz do kolejki
-    CLIENT_LOCATION = LOCATION_CASH_QUEUE;
     if(msgrcv(CASH_MSQID, &buffer, sizeof(buffer.mvalue), MSQ_CASH_EMPTY, 0) == FAILURE && errno != EINTR){
         perror("klient - msgrcv");
         exit(EXIT_FAILURE);
