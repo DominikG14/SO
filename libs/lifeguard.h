@@ -1,19 +1,28 @@
 #pragma once
 
-#include "low.h"
-#include "global.h"
-#include "colors.h"
-#include "logging.h"
 #include "config.h"
+#include "logging.h"
+#include "global.h"
+#include "random.h"
 
 
 // -------------------- Local --------------------
-bool CASH_OPEN = true;
+bool GUARD = true;
+int GUARDED_POOL;
+
+// -------------------- Lifeguard functionality --------------------
+void close_pool(){
+
+}
+
+void open_pool(){
+
+}
 
 
 // -------------------- IPCS --------------------
 void __close_complex_handler(){
-    CASH_OPEN = false;
+    GUARD = false;
 }
 
 
@@ -26,18 +35,7 @@ void __set_close_complex_handler(){
 }
 
 
-void __access_cash_msq(){
-    key_t key = get_key(KEY_CASH_MSQ);
-    if((CASH_MSQID = msgget(key, 0600)) == FAILURE){
-        perror("kasjer - msgget");
-        exit(EXIT_FAILURE);
-    }
-}
-
-
 void setup(){
-    srand(getpid());
     __set_close_complex_handler();
     set_config_vars();
-    __access_cash_msq();
 }

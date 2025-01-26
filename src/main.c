@@ -23,7 +23,6 @@ int main(){
         imitate_time(1);
     }
 
-
     clean_up();
     exit(EXIT_SUCCESS);
 }

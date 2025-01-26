@@ -945,7 +945,7 @@ void __set_close_complex_handler(){
 }
 
 
-void __access_kasa_msq(){
+void __access_cash_msq(){
     key_t key = get_key(KEY_CASH_MSQ);
     if((CASH_MSQID = msgget(key, 0600)) == FAILURE){
         perror("klient - msgget");
@@ -958,6 +958,6 @@ void setup(){
     srand(getpid());
     set_config_vars();
     __set_close_complex_handler();
-    __access_kasa_msq();
+    __access_cash_msq();
     client_set_data();
 }
