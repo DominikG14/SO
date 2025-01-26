@@ -10,7 +10,7 @@ int main(){
 
     open_pools();
 
-    // Kasjer otwiera kase
+    // Open cash
     switch(PID_CASHIER = fork()){
         case FAILURE:
             perror("main - fork");
@@ -23,7 +23,7 @@ int main(){
     }
 
 
-    // Wpusc klientow do kolejki
+    // Let clients in
     for(int i = 0; i < 10; i++){
         switch(pid = fork()){
             case FAILURE:
@@ -44,12 +44,12 @@ int main(){
     sleep(3);
     log_console(WHO__POOL_COMPLEX, ACTION__CLOSED, LOCATION__POOL_COMPLEX, REASON__NONE);
 
-    // Zamknij kase
+    // Close cash
     kill(PID_CASHIER, SIG_CLOSE_COMPLEX);
     waitpid(PID_CASHIER, NULL, 0);
 
 
-    // Poczekaj az wszyscy opuszcza basen
+    // Remove everyone from the pool
     for(int i = 0; i < CLIENTS_NUM; i++){
         kill(PID_CLIENTS[i], SIG_CLOSE_COMPLEX);
         waitpid(PID_CLIENTS[i], NULL, 0);
