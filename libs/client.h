@@ -260,12 +260,59 @@ void client_set_data(){
 }
 
 
+void client_enter_cash_queue(){
+    // Join cash queue
+    set_client_info(ACTION__ENTERED, LOCATION__CASH_QUEUE, REASON__NONE), log_client(WHO__CLIENT);
+    if(client_has_child()){
+        child.tid = new_thread(child_keep_eye_on, NULL);
+        pthread_join(child.tid, NULL);
+    }
+    if(msgrcv(CASH_MSQID, &MSQ_BUFFER, sizeof(MSQ_BUFFER.mvalue), MSQ_CASH_EMPTY, 0) == FAILURE && errno != EINTR){
+        perror("klient - msgrcv");
+        exit(EXIT_FAILURE);
+    }
+
+
+    // Pay
+    set_client_info(ACTION__PAID, LOCATION__CASH_QUEUE, REASON__NONE), log_client(WHO__CLIENT);
+    MSQ_BUFFER.mtype=MSQ_CASH_PAY;
+    if(msgsnd(CASH_MSQID, &MSQ_BUFFER, sizeof(MSQ_BUFFER.mvalue), 0) == FAILURE){
+        perror("klient - msgsnd");
+        exit(EXIT_FAILURE);
+    }
+
+
+    // Wait for bill
+    if(msgrcv(CASH_MSQID, &MSQ_BUFFER, sizeof(MSQ_BUFFER.mvalue), MSQ_CASH_BILL, 0) == FAILURE && errno != EINTR){
+        perror("klient - msgrcv");
+        exit(EXIT_FAILURE);
+    }
+    set_client_info(ACTION__RECIVED_BILL, LOCATION__CASH_QUEUE, REASON__NONE), log_client(WHO__CLIENT);
+    set_client_info(ACTION__LEFT, LOCATION__CASH_QUEUE, REASON__PAYMENT_FINISHED), log_client(WHO__CLIENT);
+    if(client_has_child()){
+        child.tid = new_thread(child_keep_eye_on, NULL);
+        pthread_join(child.tid, NULL);
+    }
+}
+
+
+void client_enter_complex(){
+    if(client.vip){ // go straight to choosing pool
+        set_client_info(ACTION__LEFT, LOCATION__CASH_QUEUE, REASON__VIP), log_client(WHO__CLIENT);
+        if(client_has_child()){
+            child.tid = new_thread(child_keep_eye_on, NULL);
+            pthread_join(child.tid, NULL);
+        }
+    }
+
+    else client_enter_cash_queue();
+}
+
+
 void client_leave_complex(){
     set_client_info(ACTION__LEFT, LOG__DONT_CHANGE, REASON__COMPLEX_CLOSED), log_client(WHO__CLIENT);
 
-
     if(client_has_child()) log_client(WHO__CHILD);
-
     exit(EXIT_SUCCESS);
 }
 
