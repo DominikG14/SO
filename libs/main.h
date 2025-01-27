@@ -63,9 +63,11 @@ void disp_time(int time){
 
 
 void disp_curr_time(){
-    if(open_complex_time()) disp_time(COMPLEX_OPEN_TIME);
-    else if(close_complex_time()) disp_time(COMPLEX_CLOSE_TIME);
-    else disp_time(TIME_CURR);
+    if(TIME_DISP){
+        if(open_complex_time()) disp_time(COMPLEX_OPEN_TIME);
+        else if(close_complex_time()) disp_time(COMPLEX_CLOSE_TIME);
+        else disp_time(TIME_CURR);
+    }
 }
 
 
@@ -168,7 +170,7 @@ void open_complex(){
 
 void close_complex(){
     log_console(WHO__POOL_COMPLEX, ACTION__CLOSED, LOCATION__POOL_COMPLEX, REASON__COMPLEX_CLOSED);
-
+    
     close_cash();
     remove_all_clients();
 }

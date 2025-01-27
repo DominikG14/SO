@@ -23,6 +23,8 @@ int main(){
         imitate_time(1);
     }
 
+    if(COMPLEX_IS_OPEN) close_complex();
+
 
     clean_up();
     exit(EXIT_SUCCESS);

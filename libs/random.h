@@ -2,6 +2,7 @@
 
 #include <stdlib.h>
 #include <unistd.h>
+#include "config.h"
 
 
 int rand_int(int min, int max){

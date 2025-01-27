@@ -40,20 +40,6 @@ struct ChildPoolData {
 } typedef ChildPoolData;
 
 
-// -------------------- Config --------------------
-int CLIENT_SWIM_CAP_PREC = 30;
-int CLIENT_HAS_CHILD_PERC = 30;
-int CLIENT_MIN_AGE = 10;
-int CLIENT_MAX_AGE = 70;
-int CLIENT_MIN_SWIM_TIME = 1;
-int CLIENT_MAX_SWIM_TIME = 3;
-
-int CHILD_MIN_AGE = 1;
-int CHILD_MAX_AGE = 9;
-int CHILD_BABY_AGE = 5;
-int CHILD_DIAPER_AGE = 3;
-
-
 // -------------------- Local --------------------
 int CLIENT_ACTION;
 int CLIENT_LOCATION;
@@ -268,10 +254,8 @@ void client_set_data(){
 void client_leave_complex(){
     set_client_info(ACTION__LEFT, LOG__DONT_CHANGE, REASON__COMPLEX_CLOSED), log_client(WHO__CLIENT);
 
-    if(client_has_child()){
-        child.tid = new_thread(child_keep_eye_on, NULL);
-        pthread_join(child.tid, NULL);
-    }
+
+    if(client_has_child()) log_client(WHO__CHILD);
 
     exit(EXIT_SUCCESS);
 }
@@ -412,17 +396,17 @@ void olimpic_access_pool(){
     key_shm = get_key(KEY_OLIMPIC_POOL_SHM);
 
     if((OLIMPIC_POOL_MSQID = msgget(key_msq, 0600)) == FAILURE){
-        perror("klient - msgget - pools");
+        perror("client - msgget - olimpic");
         exit(EXIT_FAILURE);
     }
 
     if((OLIMPIC_POOL_SEMID = semget(key_sem, SEM_POOL_NUM, 0600)) == FAILURE){
-        perror("klient - semget - pools");
+        perror("client - semget - olimpic");
         exit(EXIT_FAILURE);
     }
 
     if((OLIMPIC_POOL_SHMID = shmget(key_shm, sizeof(int), 0600)) == FAILURE){
-        perror("klient - shmget - pools");
+        perror("client - shmget - olimpic");
         exit(EXIT_FAILURE);
     }
 }
@@ -452,7 +436,7 @@ void olimpic_join_pool(){
 
     // Enter olimpic pool queue
     if(msgrcv(OLIMPIC_POOL_MSQID, &MSQ_BUFFER, sizeof(MSQ_BUFFER.mvalue), MSQ_POOL_SPACE, 0) == FAILURE && errno != EINTR){
-        perror("klient - msgrcv");
+        perror("client - msgrcv - olimpic");
         exit(EXIT_FAILURE);
     }
     if(waited_in_queue) set_client_info(ACTION__LEFT, LOCATION__OLIMPIC_QUEUE, REASON__SPACE_AVAILABLE), log_client(WHO__CLIENT);
@@ -485,7 +469,7 @@ void olimpic_join_pool(){
     
     MSQ_BUFFER.mtype=MSQ_POOL_SPACE;
     if(msgsnd(OLIMPIC_POOL_MSQID, &MSQ_BUFFER, sizeof(MSQ_BUFFER.mvalue), 0) == FAILURE){
-        perror("klient - msgsnd - olimpic");
+        perror("client - msgsnd - olimpic");
         exit(EXIT_FAILURE);
     }
 
@@ -585,17 +569,17 @@ void leisure_access_pool(){
     key_shm = get_key(KEY_LEISURE_POOL_SHM);
 
     if((LEISURE_POOL_MSQID = msgget(key_msq, 0600)) == FAILURE){
-        perror("klient - msgget - pools");
+        perror("client - msgget - leisure");
         exit(EXIT_FAILURE);
     }
 
     if((LEISURE_POOL_SEMID = semget(key_sem, SEM_POOL_NUM, 0600)) == FAILURE){
-        perror("klient - semget - pools");
+        perror("client - semget - leisure");
         exit(EXIT_FAILURE);
     }
 
     if((LEISURE_POOL_SHMID = shmget(key_shm, 2*sizeof(int), 0600)) == FAILURE){
-        perror("klient - shmget - pools");
+        perror("client - shmget - leisure");
         exit(EXIT_FAILURE);
     }
 }
@@ -828,17 +812,17 @@ void paddling_access_pool(){
     key_shm = get_key(KEY_PADDLING_POOL_SHM);
 
     if((PADDLING_POOL_MSQID = msgget(key_msq, 0600)) == FAILURE){
-        perror("main - msgget - pools");
+        perror("main - msgget - paddling");
         exit(EXIT_FAILURE);
     }
 
     if((PADDLING_POOL_SEMID = semget(key_sem, SEM_POOL_NUM, 0600)) == FAILURE){
-        perror("main - semget - pools");
+        perror("main - semget - paddling");
         exit(EXIT_FAILURE);
     }
 
     if((PADDLING_POOL_SHMID = shmget(key_shm, sizeof(int), 0600)) == FAILURE){
-        perror("main - shmget - pools");
+        perror("main - shmget - paddling");
         exit(EXIT_FAILURE);
     }
 }
@@ -875,7 +859,7 @@ void paddling_join_pool(){
 
     // Enter paddling queue
     if(msgrcv(PADDLING_POOL_MSQID, &MSQ_BUFFER, sizeof(MSQ_BUFFER.mvalue), MSQ_POOL_SPACE, 0) == FAILURE && errno != EINTR){
-        perror("klient - msgrcv");
+        perror("client - msgrcv - paddling");
         exit(EXIT_FAILURE);
     }
     if(waited_in_queue){
@@ -922,7 +906,7 @@ void paddling_join_pool(){
     
     MSQ_BUFFER.mtype=MSQ_POOL_SPACE;
     if(msgsnd(PADDLING_POOL_MSQID, &MSQ_BUFFER, sizeof(MSQ_BUFFER.mvalue), 0) == FAILURE){
-        perror("klient - msgsnd - olimpic");
+        perror("client - msgsnd - olimpic");
         exit(EXIT_FAILURE);
     }
 
@@ -945,10 +929,10 @@ void __set_close_complex_handler(){
 }
 
 
-void __access_kasa_msq(){
+void __access_cash_msq(){
     key_t key = get_key(KEY_CASH_MSQ);
     if((CASH_MSQID = msgget(key, 0600)) == FAILURE){
-        perror("klient - msgget");
+        perror("client - msgget");
         exit(EXIT_FAILURE);
     }
 }
@@ -958,6 +942,6 @@ void setup(){
     srand(getpid());
     set_config_vars();
     __set_close_complex_handler();
-    __access_kasa_msq();
+    __access_cash_msq();
     client_set_data();
 }

@@ -26,7 +26,7 @@ void __set_close_complex_handler(){
 }
 
 
-void __access_kasa_msq(){
+void __access_cash_msq(){
     key_t key = get_key(KEY_CASH_MSQ);
     if((CASH_MSQID = msgget(key, 0600)) == FAILURE){
         perror("kasjer - msgget");
@@ -38,5 +38,5 @@ void __access_kasa_msq(){
 void setup(){
     __set_close_complex_handler();
     set_config_vars();
-    __access_kasa_msq();
+    __access_cash_msq();
 }
