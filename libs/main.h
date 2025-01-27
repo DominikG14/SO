@@ -12,6 +12,7 @@
 int TIME_CURR;
 
 int PID_CASHIER;
+int PID_LIFEGUARDS[3];
 
 int PID_CLIENTS[1440];
 int CLIENTS_NUM = 0;
@@ -71,7 +72,7 @@ void disp_curr_time(){
 }
 
 
-// -------------------- Pool Complex functionality --------------------
+// -------------------- Pool Complex Open --------------------
 void open_pools(){
     MSQ_BUFFER.mtype=MSQ_POOL_SPACE;
 
@@ -105,6 +106,39 @@ void open_pools(){
 }
 
 
+void open_cash(){
+    switch(PID_CASHIER = fork()){
+        case FAILURE:
+            perror("main - fork");
+            exit(EXIT_FAILURE);
+
+        case SUCCESS:
+            execl(PS_CASHIER_PATH, PS_CASHIER_NAME, NULL);
+            perror("main - execl");
+            exit(EXIT_FAILURE);
+    }
+}
+
+
+void set_lifeguards(){
+    for(int pool_num = 0; pool_num < 3; pool_num++){
+        switch(PID_LIFEGUARDS[pool_num] = fork()){
+            case FAILURE:
+                perror("main - fork");
+                exit(EXIT_FAILURE);
+            
+            case SUCCESS:
+                char str_pool_num[2];
+                sprintf(str_pool_num, "%d", pool_num);
+
+                execl(PS_LIFEGUARD_PATH, PS_LIFEGUARD_NAME, str_pool_num, NULL);
+                perror("main - execl");
+                exit(EXIT_FAILURE);
+        }
+    }
+}
+
+
 void let_clients_in(){
     int pid;
 
@@ -132,6 +166,23 @@ void let_clients_in(){
 }
 
 
+void open_complex(){
+    log_console(WHO__POOL_COMPLEX, ACTION__OPENED, LOCATION__POOL_COMPLEX, REASON__NONE);
+    COMPLEX_IS_OPEN = true;
+
+    open_pools();
+    open_cash();
+    set_lifeguards();
+}
+
+
+// -------------------- Pool Complex Close --------------------
+void close_cash(){
+    kill(PID_CASHIER, SIG_CLOSE_COMPLEX);
+    waitpid(PID_CASHIER, NULL, 0);
+}
+
+
 void remove_all_clients(){
     for(int i = 0; i < CLIENTS_NUM; i++){
         kill(PID_CLIENTS[i], SIG_CLOSE_COMPLEX);
@@ -140,31 +191,11 @@ void remove_all_clients(){
 }
 
 
-void open_cash(){
-    switch(PID_CASHIER = fork()){
-        case FAILURE:
-            perror("main - fork");
-            exit(EXIT_FAILURE);
-
-        case SUCCESS:
-            execl(PS_CASHIER_PATH, PS_CASHIER_NAME, NULL);
-            perror("main - execl");
-            exit(EXIT_FAILURE);
+void remove_lifeguards(){
+    for(int pool_num = 0; pool_num < 3; pool_num++){
+        kill(PID_LIFEGUARDS[pool_num], SIG_CLOSE_COMPLEX);
+        waitpid(PID_LIFEGUARDS[pool_num], NULL, 0);
     }
-}
-
-
-void close_cash(){
-    kill(PID_CASHIER, SIG_CLOSE_COMPLEX);
-    waitpid(PID_CASHIER, NULL, 0);
-}
-
-
-void open_complex(){
-    log_console(WHO__POOL_COMPLEX, ACTION__OPENED, LOCATION__POOL_COMPLEX, REASON__NONE);
-    COMPLEX_IS_OPEN = true;
-    open_cash();
-    open_pools();
 }
 
 
@@ -173,6 +204,7 @@ void close_complex(){
     
     close_cash();
     remove_all_clients();
+    remove_lifeguards();
 }
 
 
