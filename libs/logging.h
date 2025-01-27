@@ -7,6 +7,7 @@
 
 #include "low.h"
 #include "global.h"
+#include "config.h"
 
 
 int LOG__DONT_CHANGE = -1; // For leaving current info as it is

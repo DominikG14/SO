@@ -57,8 +57,6 @@ enum SEM__OPERATIONS {
     SEM_SIGNAL = 1
 };
 
-char* LOGGING_FILEPATH = "./logs";
-
 
 enum CLIENT_POOL_ACTION {
     STATUS_ENTER,

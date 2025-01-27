@@ -28,6 +28,8 @@ void bright_white()   { printf("\033[97m"); }
 
 // special
 void bold_underline_cyan() { printf("\033[1m\033[4m\033[36m"); }
+void bold_red() { printf("\033[1m\033[31m"); }
+void bold_cyan() { printf("\033[1m\033[36m"); }
 
 
 // Reset to default font color
