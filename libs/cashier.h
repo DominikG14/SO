@@ -5,6 +5,7 @@
 #include "colors.h"
 #include "logging.h"
 #include "config.h"
+#include "random.h"
 
 
 // -------------------- Local --------------------

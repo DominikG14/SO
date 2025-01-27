@@ -8,7 +8,7 @@ int main(){
 
     while(CASH_OPEN){
 
-        // Przyjmij klienta
+        // Get client
         MSQ_BUFFER.mtype=MSQ_CASH_EMPTY;
         if(msgsnd(CASH_MSQID, &MSQ_BUFFER, sizeof(MSQ_BUFFER.mvalue), 0) == FAILURE){
             perror("kasjer - msgsnd - klienta");
@@ -16,18 +16,18 @@ int main(){
         }
 
 
-        // Przyjmij zaplate
+        // Get Payment
         if(msgrcv(CASH_MSQID, &MSQ_BUFFER, sizeof(MSQ_BUFFER.mvalue), MSQ_CASH_PAY, 0) == FAILURE){
-            if(errno == EINTR){
-                continue;
-            }
             perror("kasjer - msgrcv - zaplata");
             exit(EXIT_FAILURE);
         }
         log_console(WHO__CASHIER, ACTION__RECIVED_PAY, LOCATION__CASH_QUEUE, REASON__NONE);
 
 
-        // Wrecz paragon
+        imitate_time(rand_int(CASHIER_MIN_PAYMENT_TIME, CASHIER_MAX_PAYMENT_TIME));
+        
+
+        // Give bill
         MSQ_BUFFER.mtype=MSQ_CASH_BILL;
         if(msgsnd(CASH_MSQID, &MSQ_BUFFER, sizeof(MSQ_BUFFER.mvalue), 0) == FAILURE){
             perror("kasjer - msgsnd - paragon");
