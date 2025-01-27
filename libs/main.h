@@ -19,6 +19,17 @@ int CLIENTS_NUM = 0;
 
 bool COMPLEX_IS_OPEN = false;
 
+int OLIMPIC_POOL_MSQID;
+int OLIMPIC_POOL_SEMID;
+int OLIMPIC_POOL_SHMID;
+
+int LEISURE_POOL_MSQID;
+int LEISURE_POOL_SEMID;
+int LEISURE_POOL_SHMID;
+
+int PADDLING_POOL_MSQID;
+int PADDLING_POOL_SEMID;
+int PADDLING_POOL_SHMID;
 
 // -------------------- Bools --------------------
 bool open_complex_time(){

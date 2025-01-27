@@ -43,14 +43,13 @@ struct ChildPoolData {
 
 
 // -------------------- Pool data --------------------
-void enter_pid(int shmid){
+void enter_pid(){
     // CALL THIS ONLY WHEN PROCESS ACCESSES SEM TO SHARED MEM!
-    PoolData* pool =(PoolData*) shmat(shmid, NULL, 0);
+    PoolData* pool =(PoolData*) shmat(POOL_SHMID, NULL, 0);
 
     for(int i = 0; i < MAX_CLIENTS_PER_DAY; i++){
         if(pool->pid_clients[i] == -1){
             pool->pid_clients[i] = getpid();
-            printf_clr(green, "\tPID_ADD: %d to [%d]\n", getpid(), i);
             break;
         }
     }
@@ -58,14 +57,13 @@ void enter_pid(int shmid){
 }
 
 
-void remove_pid(int shmid){
+void remove_pid(){
     // CALL THIS ONLY WHEN PROCESS ACCESSES SEM TO SHARED MEM!
-    PoolData* pool =(PoolData*) shmat(shmid, NULL, 0);
+    PoolData* pool =(PoolData*) shmat(POOL_SHMID, NULL, 0);
 
     for(int i = 0; i < MAX_CLIENTS_PER_DAY; i++){
         if(pool->pid_clients[i] == getpid()){
             pool->pid_clients[i] = -1;
-            printf_clr(green, "\tPID_REMOVE: %d from [%d]\n", getpid(), i);
             break;
         }
     }
@@ -185,10 +183,10 @@ void* child_keep_eye_pool(void* thread_flags){
 }
 
 
-void* child_enter_pool(void* thread_flags){
+void* child_pool(void* thread_flags){
     ChildPoolData* cpd =(ChildPoolData*) thread_flags;
 
-    PoolData* pool =(PoolData*) shmat(PADDLING_POOL_SHMID, NULL, 0);
+    PoolData* pool =(PoolData*) shmat(POOL_SHMID, NULL, 0);
 
     switch(cpd->status){
         case STATUS_ENTER:
@@ -335,15 +333,13 @@ void client_choose_pool(){
         leisure_join_pool();
     }
 
-    olimpic_join_pool();
+    switch(rand_int(OLIMPIC, LEISURE)){
+        case OLIMPIC:
+            olimpic_join_pool();
 
-    // switch(rand_int(OLIMPIC, LEISURE)){
-    //     case OLIMPIC:
-    //         olimpic_join_pool();
-
-    //     case LEISURE:
-    //         leisure_join_pool();
-    // }
+        case LEISURE:
+            leisure_join_pool();
+    }
 }
 
 
@@ -462,17 +458,17 @@ void olimpic_access_pool(){
     key_sem = get_key(KEY_OLIMPIC_POOL_SEM);
     key_shm = get_key(KEY_OLIMPIC_POOL_SHM);
 
-    if((OLIMPIC_POOL_MSQID = msgget(key_msq, 0600)) == FAILURE){
+    if((POOL_MSQID = msgget(key_msq, 0600)) == FAILURE){
         perror("client - msgget - olimpic");
         exit(EXIT_FAILURE);
     }
 
-    if((OLIMPIC_POOL_SEMID = semget(key_sem, SEM_POOL_NUM, 0600)) == FAILURE){
+    if((POOL_SEMID = semget(key_sem, SEM_POOL_NUM, 0600)) == FAILURE){
         perror("client - semget - olimpic");
         exit(EXIT_FAILURE);
     }
 
-    if((OLIMPIC_POOL_SHMID = shmget(key_shm, sizeof(int), 0600)) == FAILURE){
+    if((POOL_SHMID = shmget(key_shm, sizeof(PoolData), 0600)) == FAILURE){
         perror("client - shmget - olimpic");
         exit(EXIT_FAILURE);
     }
@@ -481,12 +477,12 @@ void olimpic_access_pool(){
 
 void olimpic_join_pool(){
     olimpic_access_pool();
-    PoolData* pool =(PoolData*) shmat(OLIMPIC_POOL_SHMID, NULL, 0);
+    PoolData* pool =(PoolData*) shmat(POOL_SHMID, NULL, 0);
     bool waited_in_queue = true; // If space in pool available skip the queue
 
 
     SEM_OPERATE.sem_op = SEM_WAIT;
-    semop(OLIMPIC_POOL_SEMID, &SEM_OPERATE, 1);
+    semop(POOL_SEMID, &SEM_OPERATE, 1);
     POOL_SIZE = pool->size;
 
     if(POOL_SIZE < POOL_OLIMPIC_MAX_SIZE){
@@ -498,11 +494,11 @@ void olimpic_join_pool(){
     }
 
     SEM_OPERATE.sem_op = SEM_SIGNAL;
-    semop(OLIMPIC_POOL_SEMID, &SEM_OPERATE, 1); 
+    semop(POOL_SEMID, &SEM_OPERATE, 1); 
 
 
     // Enter olimpic pool queue
-    if(msgrcv(OLIMPIC_POOL_MSQID, &MSQ_BUFFER, sizeof(MSQ_BUFFER.mvalue), MSQ_POOL_SPACE, 0) == FAILURE && errno != EINTR){
+    if(msgrcv(POOL_MSQID, &MSQ_BUFFER, sizeof(MSQ_BUFFER.mvalue), MSQ_POOL_SPACE, 0) == FAILURE && errno != EINTR){
         perror("client - msgrcv - olimpic");
         exit(EXIT_FAILURE);
     }
@@ -511,16 +507,16 @@ void olimpic_join_pool(){
 
     // Enter olimpic pool
     SEM_OPERATE.sem_op = SEM_WAIT;
-    semop(OLIMPIC_POOL_SEMID, &SEM_OPERATE, 1);
+    semop(POOL_SEMID, &SEM_OPERATE, 1);
     pool->size += 1;
     POOL_SIZE = pool->size;
     set_client_info(ACTION__ENTERED, LOCATION__OLIMPIC_POOL, REASON__NONE);
     log_pool_data(olimpic_get_data, STATUS_ENTER, WHO__CLIENT);
 
-    enter_pid(OLIMPIC_POOL_SEMID);
+    enter_pid();
 
     SEM_OPERATE.sem_op = SEM_SIGNAL;
-    semop(OLIMPIC_POOL_SEMID, &SEM_OPERATE, 1);
+    semop(POOL_SEMID, &SEM_OPERATE, 1);
 
 
     // Swim in pool
@@ -529,21 +525,21 @@ void olimpic_join_pool(){
 
     // Make space for others
     SEM_OPERATE.sem_op = SEM_WAIT;
-    semop(OLIMPIC_POOL_SEMID, &SEM_OPERATE, 1);
+    semop(POOL_SEMID, &SEM_OPERATE, 1);
 
     pool->size -= 1;
     POOL_SIZE = pool->size;
     set_client_info(ACTION__LEFT, LOCATION__OLIMPIC_POOL, REASON__END_OF_SWIM_TIME);
     log_pool_data(olimpic_get_data, STATUS_LEAVE, WHO__CLIENT);
 
-    remove_pid(OLIMPIC_POOL_SEMID);
+    remove_pid();
     shmdt(pool);
 
     SEM_OPERATE.sem_op = SEM_SIGNAL;
-    semop(OLIMPIC_POOL_SEMID, &SEM_OPERATE, 1);
+    semop(POOL_SEMID, &SEM_OPERATE, 1);
     
     MSQ_BUFFER.mtype=MSQ_POOL_SPACE;
-    if(msgsnd(OLIMPIC_POOL_MSQID, &MSQ_BUFFER, sizeof(MSQ_BUFFER.mvalue), 0) == FAILURE){
+    if(msgsnd(POOL_MSQID, &MSQ_BUFFER, sizeof(MSQ_BUFFER.mvalue), 0) == FAILURE){
         perror("client - msgsnd - olimpic");
         exit(EXIT_FAILURE);
     }
@@ -643,17 +639,17 @@ void leisure_access_pool(){
     key_sem = get_key(KEY_LEISURE_POOL_SEM);
     key_shm = get_key(KEY_LEISURE_POOL_SHM);
 
-    if((LEISURE_POOL_MSQID = msgget(key_msq, 0600)) == FAILURE){
+    if((POOL_MSQID = msgget(key_msq, 0600)) == FAILURE){
         perror("client - msgget - leisure");
         exit(EXIT_FAILURE);
     }
 
-    if((LEISURE_POOL_SEMID = semget(key_sem, SEM_POOL_NUM, 0600)) == FAILURE){
+    if((POOL_SEMID = semget(key_sem, SEM_POOL_NUM, 0600)) == FAILURE){
         perror("client - semget - leisure");
         exit(EXIT_FAILURE);
     }
 
-    if((LEISURE_POOL_SHMID = shmget(key_shm, 2*sizeof(int), 0600)) == FAILURE){
+    if((POOL_SHMID = shmget(key_shm, sizeof(PoolData), 0600)) == FAILURE){
         perror("client - shmget - leisure");
         exit(EXIT_FAILURE);
     }
@@ -665,7 +661,7 @@ void leisure_join_pool(){
     ChildPoolData cpd;
     cpd.get_pool_data = leisure_get_data;
 
-    PoolData* pool =(PoolData*) shmat(LEISURE_POOL_SHMID, NULL, 0);
+    PoolData* pool =(PoolData*) shmat(POOL_SHMID, NULL, 0);
     bool wait_in_queue  = true; // If space in pool available skip the queue
     bool enough_space   = false;
     bool age_belowe_avg = false;
@@ -673,7 +669,7 @@ void leisure_join_pool(){
 
 
     SEM_OPERATE.sem_op = SEM_WAIT;
-    semop(LEISURE_POOL_SEMID, &SEM_OPERATE, 1);
+    semop(POOL_SEMID, &SEM_OPERATE, 1);
     POOL_SIZE = pool->size;
     POOL_AGE_SUM = pool->age_sum;
 
@@ -726,14 +722,14 @@ void leisure_join_pool(){
      // Enter leisure pool queue
     if(wait_in_queue){
         SEM_OPERATE.sem_op = SEM_SIGNAL;
-        semop(LEISURE_POOL_SEMID, &SEM_OPERATE, 1);
+        semop(POOL_SEMID, &SEM_OPERATE, 1);
 
         while(true){
             enough_space = false;
             age_belowe_avg = false;
 
             SEM_OPERATE.sem_op = SEM_WAIT;
-            semop(LEISURE_POOL_SEMID, &SEM_OPERATE, 1);
+            semop(POOL_SEMID, &SEM_OPERATE, 1);
             POOL_SIZE = pool->size;
             POOL_AGE_SUM = pool->age_sum;
 
@@ -776,7 +772,7 @@ void leisure_join_pool(){
             else {
                 // Go back to the end of the queue and make space for others
                 SEM_OPERATE.sem_op = SEM_SIGNAL;
-                semop(LEISURE_POOL_SEMID, &SEM_OPERATE, 1);
+                semop(POOL_SEMID, &SEM_OPERATE, 1);
             }
         }
     }
@@ -788,21 +784,21 @@ void leisure_join_pool(){
     POOL_SIZE = pool->size;
     POOL_AGE_SUM = pool->age_sum;
 
-    enter_pid(LEISURE_POOL_SHMID);
+    enter_pid();
 
     set_client_info(ACTION__ENTERED, LOCATION__LEISURE_POOL, REASON__NONE);
     if(client_has_child()){
         pool->age_sum += child.age;
         POOL_AGE_SUM = pool->age_sum;
         cpd.status = STATUS_ENTER;
-        child.tid = new_thread(child_enter_pool, &cpd);
+        child.tid = new_thread(child_pool, &cpd);
         pthread_join(child.tid, NULL);
     }
     log_pool_data(leisure_get_data, STATUS_ENTER, WHO__CLIENT);
  
 
     SEM_OPERATE.sem_op = SEM_SIGNAL;
-    semop(LEISURE_POOL_SEMID, &SEM_OPERATE, 1);
+    semop(POOL_SEMID, &SEM_OPERATE, 1);
 
 
     // Swim in pool
@@ -811,7 +807,7 @@ void leisure_join_pool(){
 
     // Make space for others
     SEM_OPERATE.sem_op = SEM_WAIT;
-    semop(LEISURE_POOL_SEMID, &SEM_OPERATE, 1);
+    semop(POOL_SEMID, &SEM_OPERATE, 1);
 
     pool->size -= 1;
     pool->age_sum -= client.age;
@@ -824,17 +820,17 @@ void leisure_join_pool(){
         pool->age_sum -= child.age;
         POOL_AGE_SUM = pool->age_sum;
         cpd.status = STATUS_LEAVE;
-        child.tid = new_thread(child_enter_pool, &cpd);
+        child.tid = new_thread(child_pool, &cpd);
         pthread_join(child.tid, NULL);
     }
 
     log_pool_data(leisure_get_data, STATUS_LEAVE, WHO__CLIENT);
 
-    remove_pid(LEISURE_POOL_SHMID);
+    remove_pid();
     shmdt(pool);
 
     SEM_OPERATE.sem_op = SEM_SIGNAL;
-    semop(LEISURE_POOL_SEMID, &SEM_OPERATE, 1);
+    semop(POOL_SEMID, &SEM_OPERATE, 1);
 
     exit(EXIT_SUCCESS);
 }
@@ -892,17 +888,17 @@ void paddling_access_pool(){
     key_sem = get_key(KEY_PADDLING_POOL_SEM);
     key_shm = get_key(KEY_PADDLING_POOL_SHM);
 
-    if((PADDLING_POOL_MSQID = msgget(key_msq, 0600)) == FAILURE){
+    if((POOL_MSQID = msgget(key_msq, 0600)) == FAILURE){
         perror("main - msgget - paddling");
         exit(EXIT_FAILURE);
     }
 
-    if((PADDLING_POOL_SEMID = semget(key_sem, SEM_POOL_NUM, 0600)) == FAILURE){
+    if((POOL_SEMID = semget(key_sem, SEM_POOL_NUM, 0600)) == FAILURE){
         perror("main - semget - paddling");
         exit(EXIT_FAILURE);
     }
 
-    if((PADDLING_POOL_SHMID = shmget(key_shm, sizeof(int), 0600)) == FAILURE){
+    if((POOL_SHMID = shmget(key_shm, sizeof(PoolData), 0600)) == FAILURE){
         perror("main - shmget - paddling");
         exit(EXIT_FAILURE);
     }
@@ -914,12 +910,12 @@ void paddling_join_pool(){
     ChildPoolData cpd;
     cpd.get_pool_data = paddling_get_data;
 
-    PoolData* pool =(PoolData*) shmat(PADDLING_POOL_SHMID, NULL, 0);
+    PoolData* pool =(PoolData*) shmat(POOL_SHMID, NULL, 0);
     bool waited_in_queue = true; // If space in pool available skip the queue
 
 
     SEM_OPERATE.sem_op = SEM_WAIT;
-    semop(PADDLING_POOL_SEMID, &SEM_OPERATE, 1);
+    semop(POOL_SEMID, &SEM_OPERATE, 1);
     POOL_SIZE = pool->size;
 
     if(POOL_PADDLING_MAX_SIZE - POOL_SIZE >= 2){
@@ -935,11 +931,11 @@ void paddling_join_pool(){
     }
 
     SEM_OPERATE.sem_op = SEM_SIGNAL;
-    semop(PADDLING_POOL_SEMID, &SEM_OPERATE, 1); 
+    semop(POOL_SEMID, &SEM_OPERATE, 1); 
 
 
     // Enter paddling queue
-    if(msgrcv(PADDLING_POOL_MSQID, &MSQ_BUFFER, sizeof(MSQ_BUFFER.mvalue), MSQ_POOL_SPACE, 0) == FAILURE && errno != EINTR){
+    if(msgrcv(POOL_MSQID, &MSQ_BUFFER, sizeof(MSQ_BUFFER.mvalue), MSQ_POOL_SPACE, 0) == FAILURE && errno != EINTR){
         perror("client - msgrcv - paddling");
         exit(EXIT_FAILURE);
     }
@@ -952,7 +948,7 @@ void paddling_join_pool(){
 
     // Enter paddling pool
     SEM_OPERATE.sem_op = SEM_WAIT;
-    semop(PADDLING_POOL_SEMID, &SEM_OPERATE, 1);
+    semop(POOL_SEMID, &SEM_OPERATE, 1);
 
     pool->size += 1;
     POOL_SIZE = pool->size;
@@ -960,13 +956,13 @@ void paddling_join_pool(){
     log_pool_data(paddling_get_data, STATUS_ENTER, WHO__CLIENT);
 
     cpd.status = STATUS_ENTER;
-    child.tid = new_thread(child_enter_pool, &cpd);
+    child.tid = new_thread(child_pool, &cpd);
     pthread_join(child.tid, NULL);
 
-    enter_pid(PADDLING_POOL_SHMID);
+    enter_pid();
 
     SEM_OPERATE.sem_op = SEM_SIGNAL;
-    semop(PADDLING_POOL_SEMID, &SEM_OPERATE, 1);
+    semop(POOL_SEMID, &SEM_OPERATE, 1);
 
 
     // Swim in pool
@@ -975,7 +971,7 @@ void paddling_join_pool(){
 
     // Make space for others
     SEM_OPERATE.sem_op = SEM_WAIT;
-    semop(PADDLING_POOL_SEMID, &SEM_OPERATE, 1);
+    semop(POOL_SEMID, &SEM_OPERATE, 1);
 
     pool->size -= 1;
     POOL_SIZE = pool->size;
@@ -983,17 +979,17 @@ void paddling_join_pool(){
     log_pool_data(paddling_get_data, STATUS_LEAVE, WHO__CLIENT);
 
     cpd.status = STATUS_LEAVE;
-    child.tid = new_thread(child_enter_pool, &cpd);
+    child.tid = new_thread(child_pool, &cpd);
     pthread_join(child.tid, NULL);
 
-    remove_pid(LEISURE_POOL_SHMID);
+    remove_pid();
     shmdt(pool);
 
     SEM_OPERATE.sem_op = SEM_SIGNAL;
-    semop(PADDLING_POOL_SEMID, &SEM_OPERATE, 1);
+    semop(POOL_SEMID, &SEM_OPERATE, 1);
     
     MSQ_BUFFER.mtype=MSQ_POOL_SPACE;
-    if(msgsnd(PADDLING_POOL_MSQID, &MSQ_BUFFER, sizeof(MSQ_BUFFER.mvalue), 0) == FAILURE){
+    if(msgsnd(POOL_MSQID, &MSQ_BUFFER, sizeof(MSQ_BUFFER.mvalue), 0) == FAILURE){
         perror("client - msgsnd - olimpic");
         exit(EXIT_FAILURE);
     }
@@ -1017,6 +1013,91 @@ void __set_close_complex_handler(){
 }
 
 
+void __close_pool_handler(){
+    PoolData* pool =(PoolData*) shmat(POOL_SHMID, NULL, 0);
+    ChildPoolData cpd;
+
+    SEM_OPERATE.sem_num=SEM_POOL_LIFEGUARD;
+    SEM_OPERATE.sem_op=SEM_WAIT;
+    semop(POOL_SEMID, &SEM_OPERATE, 1);
+
+    pool->size -= 1;
+    pool->age_sum -= client.age;
+    POOL_SIZE = pool->size;
+    POOL_AGE_SUM = pool->age_sum;
+
+    set_client_info(ACTION__LEFT, LOG__DONT_CHANGE, REASON__POOL_CLOSED);
+
+    if(client_has_child()){
+        pool->age_sum -= child.age;
+        POOL_AGE_SUM = pool->age_sum;
+        cpd.status = STATUS_LEAVE;
+
+        switch(CLIENT_LOCATION){
+            case LOCATION__OLIMPIC_POOL:
+                cpd.get_pool_data = olimpic_get_data;
+            break;
+
+            case LOCATION__LEISURE_POOL:
+                cpd.get_pool_data = leisure_get_data;
+            break;
+
+            case LOCATION__PADDLING_POOL:
+                cpd.get_pool_data = paddling_get_data;
+            break;
+        }
+
+        child.tid = new_thread(child_pool, &cpd);
+        pthread_join(child.tid, NULL);
+    }
+
+    switch(CLIENT_LOCATION){
+        case LOCATION__OLIMPIC_POOL:
+            log_pool_data(olimpic_get_data, STATUS_LEAVE, WHO__CLIENT);
+        break;
+
+        case LOCATION__LEISURE_POOL:
+            log_pool_data(leisure_get_data, STATUS_LEAVE, WHO__CLIENT);
+        break;
+
+        case LOCATION__PADDLING_POOL:
+            log_pool_data(paddling_get_data, STATUS_LEAVE, WHO__CLIENT);
+        break;
+    }
+
+    remove_pid();
+    shmdt(pool);
+
+    MSQ_BUFFER.mtype=MSQ_LIFEGUARD;
+    if(msgsnd(POOL_MSQID, &MSQ_BUFFER, sizeof(MSQ_BUFFER.mvalue), 0) == FAILURE){
+        perror("client - msgsnd - olimpic");
+        exit(EXIT_FAILURE);
+    }
+
+    if(client_has_child()){
+        if(msgsnd(POOL_MSQID, &MSQ_BUFFER, sizeof(MSQ_BUFFER.mvalue), 0) == FAILURE){
+            perror("client - msgsnd - olimpic");
+            exit(EXIT_FAILURE);
+        }
+    }
+
+    SEM_OPERATE.sem_op = SEM_SIGNAL;
+    semop(POOL_SEMID, &SEM_OPERATE, 1);
+    SEM_OPERATE.sem_num = SEM_POOL_SHM;
+
+    client_choose_pool();
+}
+
+
+void __set_close_pool_handler(){
+    struct sigaction handler;
+    handler.sa_handler = __close_pool_handler;
+    sigemptyset(&handler.sa_mask);
+    handler.sa_flags = 0;
+    sigaction(SIG_LIFEGUARD, &handler, 0);
+}
+
+
 void __access_cash_msq(){
     key_t key = get_key(KEY_CASH_MSQ);
     if((CASH_MSQID = msgget(key, 0600)) == FAILURE){
@@ -1030,5 +1111,6 @@ void setup(){
     srand(getpid());
     set_config_vars();
     __set_close_complex_handler();
+    __set_close_pool_handler();
     __access_cash_msq();
 }

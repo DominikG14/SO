@@ -21,18 +21,9 @@
 
 // Local for each process (they may use it or not)
 int CASH_MSQID;
-
-int OLIMPIC_POOL_MSQID;
-int OLIMPIC_POOL_SEMID;
-int OLIMPIC_POOL_SHMID;
-
-int LEISURE_POOL_MSQID;
-int LEISURE_POOL_SEMID;
-int LEISURE_POOL_SHMID;
-
-int PADDLING_POOL_MSQID;
-int PADDLING_POOL_SEMID;
-int PADDLING_POOL_SHMID;
+int POOL_MSQID;
+int POOL_SEMID;
+int POOL_SHMID;
 
 int POOL_SIZE; // Current pool size for logging
 int POOL_AGE_SUM; // For leisure pool age avg 
@@ -92,6 +83,7 @@ enum GLOBAL_KEYS {
 
 enum SEM_POOL {
     SEM_POOL_SHM,
+    SEM_POOL_LIFEGUARD,
     SEM_POOL_NUM
 };
 
@@ -105,11 +97,13 @@ enum MSQ_CASH_STATE {
 
 enum MSQ_POOL_STATE {
     MSQ_POOL_SPACE = 1,
+    MSQ_LIFEGUARD,
 };
 
 
 enum SINGALS {
     SIG_CLOSE_COMPLEX = SIGUSR1,
+    SIG_LIFEGUARD = SIGUSR2,
 };
 
 
