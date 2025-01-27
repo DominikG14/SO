@@ -17,6 +17,7 @@
 #include <string.h>
 #include <stdarg.h>
 
+#define MAX_CLIENTS_PER_DAY 1440 // num of minutes in one day
 
 // Local for each process (they may use it or not)
 int CASH_MSQID;
@@ -34,10 +35,7 @@ int PADDLING_POOL_SEMID;
 int PADDLING_POOL_SHMID;
 
 int POOL_SIZE; // Current pool size for logging
-int POOL_AGE_SUM; // For leisure pool age avg
-
-
-// Config
+int POOL_AGE_SUM; // For leisure pool age avg 
 
 
 // Message Queue
@@ -45,8 +43,16 @@ struct MsqBuffer {
 	long mtype;
 	int  mvalue;
 } typedef MsqBuffer;
-
 MsqBuffer MSQ_BUFFER; // Local buffer for each process
+
+
+// Pool Shared Mem
+struct PoolData {
+    bool open;
+    int size;
+    int age_sum; // Only for Leisure pool
+    int pid_clients[MAX_CLIENTS_PER_DAY];
+} typedef PoolData;
 
 
 // Semaphore 
@@ -54,7 +60,7 @@ struct sembuf SEM_OPERATE;
 
 enum SEM__OPERATIONS {
     SEM_WAIT = -1,
-    SEM_SIGNAL = 1
+    SEM_SIGNAL = 1,
 };
 
 
@@ -111,10 +117,4 @@ enum POOL_NAME {
     OLIMPIC,
     LEISURE,
     PADDLING,
-};
-
-
-enum LEISURE_POOL_SHM {
-    LEISURE_POOL_SIZE,
-    LEISURE_POOL_AGE_SUM,
 };

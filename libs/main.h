@@ -14,7 +14,7 @@ int TIME_CURR;
 int PID_CASHIER;
 int PID_LIFEGUARDS[3];
 
-int PID_CLIENTS[1440];
+int PID_CLIENTS[MAX_CLIENTS_PER_DAY];
 int CLIENTS_NUM = 0;
 
 bool COMPLEX_IS_OPEN = false;
@@ -210,20 +210,31 @@ void close_complex(){
 
 // -------------------- IPCS --------------------
 void clean_up(){
+    PoolData* pool;
+
     // Cash
     msgctl(CASH_MSQID, IPC_RMID, NULL);
 
     // Olimpic pool
+    pool =(PoolData*) shmat(OLIMPIC_POOL_SHMID, NULL, 0);
+    shmdt(pool);
+
     msgctl(OLIMPIC_POOL_MSQID, IPC_RMID, NULL);
     semctl(OLIMPIC_POOL_SEMID, 0, IPC_RMID, NULL);
     shmctl(OLIMPIC_POOL_SHMID, IPC_RMID, NULL);
 
     // Leisure pool
+    pool =(PoolData*) shmat(LEISURE_POOL_SHMID, NULL, 0);
+    shmdt(pool);
+
     msgctl(LEISURE_POOL_MSQID, IPC_RMID, NULL);
     semctl(LEISURE_POOL_SEMID, 0, IPC_RMID, NULL);
     shmctl(LEISURE_POOL_SHMID, IPC_RMID, NULL);
 
     // Paddling pool
+    pool =(PoolData*) shmat(PADDLING_POOL_SHMID, NULL, 0);
+    shmdt(pool);
+
     msgctl(PADDLING_POOL_MSQID, IPC_RMID, NULL);
     semctl(PADDLING_POOL_SEMID, 0, IPC_RMID, NULL);
     shmctl(PADDLING_POOL_SHMID, IPC_RMID, NULL);
@@ -261,7 +272,7 @@ void __create_cash_msq(){
 
 void __create_pools(){
     key_t key_msq, key_sem, key_shm;
-    int* pool;
+    PoolData* pool;
 
     // Olimpic pool
     key_msq = get_key(KEY_OLIMPIC_POOL_MSQ);
@@ -269,21 +280,26 @@ void __create_pools(){
     key_shm = get_key(KEY_OLIMPIC_POOL_SHM);
 
     if((OLIMPIC_POOL_MSQID = msgget(key_msq, IPC_CREAT|0600)) == FAILURE){
-        perror("main - msgget - pools");
+        perror("main - msgget - olimpic");
         exit(EXIT_FAILURE);
     }
 
     if((OLIMPIC_POOL_SEMID = semget(key_sem, SEM_POOL_NUM, IPC_CREAT|0600)) == FAILURE){
-        perror("main - semget - pools");
+        perror("main - semget - olimpic");
         exit(EXIT_FAILURE);
     }
 
-    if((OLIMPIC_POOL_SHMID = shmget(key_shm, sizeof(int), IPC_CREAT|0600)) == FAILURE){
-        perror("main - shmget - pools");
+    if((OLIMPIC_POOL_SHMID = shmget(key_shm, sizeof(PoolData), IPC_CREAT|0600)) == FAILURE){
+        perror("main - shmget - olimpic");
         exit(EXIT_FAILURE);
     }
-    pool =(int*) shmat(OLIMPIC_POOL_SHMID, NULL, 0);
-    pool = 0;
+    pool =(PoolData*) shmat(OLIMPIC_POOL_SHMID, NULL, 0);
+    pool->open = true;
+    pool->size = 0;
+    pool->age_sum = 0;
+    for(int i = 0; i < MAX_CLIENTS_PER_DAY; i++){
+        pool->pid_clients[i] = -1;
+    }
     shmdt(pool);
 
 
@@ -293,23 +309,27 @@ void __create_pools(){
     key_shm = get_key(KEY_LEISURE_POOL_SHM);
 
     if((LEISURE_POOL_MSQID = msgget(key_msq, IPC_CREAT|0600)) == FAILURE){
-        perror("main - msgget - pools");
+        perror("main - msgget - leisure");
         exit(EXIT_FAILURE);
     }
 
     if((LEISURE_POOL_SEMID = semget(key_sem, SEM_POOL_NUM, IPC_CREAT|0600)) == FAILURE){
-        perror("main - semget - pools");
+        perror("main - semget - leisure");
         exit(EXIT_FAILURE);
     }
 
         // For size and age_sum
-    if((LEISURE_POOL_SHMID = shmget(key_shm, 2*sizeof(int), IPC_CREAT|0600)) == FAILURE){
-        perror("main - shmget - pools");
+    if((LEISURE_POOL_SHMID = shmget(key_shm, sizeof(PoolData), IPC_CREAT|0600)) == FAILURE){
+        perror("main - shmget - leisure");
         exit(EXIT_FAILURE);
     }
-    pool =(int*) shmat(LEISURE_POOL_SHMID, NULL, 0);
-    pool[LEISURE_POOL_SIZE] = 0;
-    pool[LEISURE_POOL_AGE_SUM] = 0;
+    pool =(PoolData*) shmat(LEISURE_POOL_SHMID, NULL, 0);
+    pool->open = true;
+    pool->size = 0;
+    pool->age_sum = 0;
+    for(int i = 0; i < MAX_CLIENTS_PER_DAY; i++){
+        pool->pid_clients[i] = -1;
+    }
     shmdt(pool);
 
 
@@ -319,21 +339,26 @@ void __create_pools(){
     key_shm = get_key(KEY_PADDLING_POOL_SHM);
 
     if((PADDLING_POOL_MSQID = msgget(key_msq, IPC_CREAT|0600)) == FAILURE){
-        perror("main - msgget - pools");
+        perror("main - msgget - paddling");
         exit(EXIT_FAILURE);
     }
 
     if((PADDLING_POOL_SEMID = semget(key_sem, SEM_POOL_NUM, IPC_CREAT|0600)) == FAILURE){
-        perror("main - semget - pools");
+        perror("main - semget - paddling");
         exit(EXIT_FAILURE);
     }
 
-    if((PADDLING_POOL_SHMID = shmget(key_shm, sizeof(int), IPC_CREAT|0600)) == FAILURE){
-        perror("main - shmget - pools");
+    if((PADDLING_POOL_SHMID = shmget(key_shm, sizeof(PoolData), IPC_CREAT|0600)) == FAILURE){
+        perror("main - shmget - paddling");
         exit(EXIT_FAILURE);
     }
-    pool =(int*) shmat(PADDLING_POOL_SHMID, NULL, 0);
-    pool = 0;
+    pool =(PoolData*) shmat(PADDLING_POOL_SHMID, NULL, 0);
+    pool->open = true;
+    pool->size = 0;
+    pool->age_sum = 0;
+    for(int i = 0; i < MAX_CLIENTS_PER_DAY; i++){
+        pool->pid_clients[i] = -1;
+    }
     shmdt(pool);
 }
 

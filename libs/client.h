@@ -18,6 +18,7 @@ void olimpic_join_pool();
 void leisure_join_pool();
 void paddling_join_pool();
 
+
 // -------------------- Struct --------------------
 struct Client {
     int age;
@@ -39,6 +40,37 @@ struct ChildPoolData {
     char* (*get_pool_data)();
     int status;
 } typedef ChildPoolData;
+
+
+// -------------------- Pool data --------------------
+void enter_pid(int shmid){
+    // CALL THIS ONLY WHEN PROCESS ACCESSES SEM TO SHARED MEM!
+    PoolData* pool =(PoolData*) shmat(shmid, NULL, 0);
+
+    for(int i = 0; i < MAX_CLIENTS_PER_DAY; i++){
+        if(pool->pid_clients[i] == -1){
+            pool->pid_clients[i] = getpid();
+            printf_clr(green, "\tPID_ADD: %d to [%d]\n", getpid(), i);
+            break;
+        }
+    }
+    shmdt(pool);
+}
+
+
+void remove_pid(int shmid){
+    // CALL THIS ONLY WHEN PROCESS ACCESSES SEM TO SHARED MEM!
+    PoolData* pool =(PoolData*) shmat(shmid, NULL, 0);
+
+    for(int i = 0; i < MAX_CLIENTS_PER_DAY; i++){
+        if(pool->pid_clients[i] == getpid()){
+            pool->pid_clients[i] = -1;
+            printf_clr(green, "\tPID_REMOVE: %d from [%d]\n", getpid(), i);
+            break;
+        }
+    }
+    shmdt(pool);
+}
 
 
 // -------------------- Local --------------------
@@ -153,45 +185,22 @@ void* child_keep_eye_pool(void* thread_flags){
 }
 
 
-void* child_paddling_pool(void* thread_flags){
+void* child_enter_pool(void* thread_flags){
     ChildPoolData* cpd =(ChildPoolData*) thread_flags;
 
-    int* pool =(int*) shmat(PADDLING_POOL_SHMID, NULL, 0);
+    PoolData* pool =(PoolData*) shmat(PADDLING_POOL_SHMID, NULL, 0);
 
     switch(cpd->status){
         case STATUS_ENTER:
-            *pool += 1;
+            pool->size += 1;
             break;
         
         case STATUS_LEAVE:
-            *pool -= 1;
+            pool->size -= 1;
             break;
     }
 
-    POOL_SIZE = *pool;
-    shmdt(pool);
-
-    log_pool_data(cpd->get_pool_data, cpd->status, WHO__CHILD);
-    pthread_exit(EXIT_SUCCESS);
-}
-
-
-void* child_leisure_pool(void* thread_flags){
-    ChildPoolData* cpd =(ChildPoolData*) thread_flags;
-
-    int* pool =(int*) shmat(LEISURE_POOL_SHMID, NULL, 0);
-
-    switch(cpd->status){
-        case STATUS_ENTER:
-            pool[LEISURE_POOL_SIZE] += 1;
-            break;
-        
-        case STATUS_LEAVE:
-            pool[LEISURE_POOL_SIZE] -= 1;
-            break;
-    }
-
-    POOL_SIZE = pool[LEISURE_POOL_SIZE];
+    POOL_SIZE = pool->size;
     shmdt(pool);
 
     log_pool_data(cpd->get_pool_data, cpd->status, WHO__CHILD);
@@ -326,13 +335,15 @@ void client_choose_pool(){
         leisure_join_pool();
     }
 
-    switch(rand_int(OLIMPIC, LEISURE)){
-        case OLIMPIC:
-            olimpic_join_pool();
+    olimpic_join_pool();
 
-        case LEISURE:
-            leisure_join_pool();
-    }
+    // switch(rand_int(OLIMPIC, LEISURE)){
+    //     case OLIMPIC:
+    //         olimpic_join_pool();
+
+    //     case LEISURE:
+    //         leisure_join_pool();
+    // }
 }
 
 
@@ -470,13 +481,13 @@ void olimpic_access_pool(){
 
 void olimpic_join_pool(){
     olimpic_access_pool();
-    int* pool =(int*) shmat(OLIMPIC_POOL_SHMID, NULL, 0);
+    PoolData* pool =(PoolData*) shmat(OLIMPIC_POOL_SHMID, NULL, 0);
     bool waited_in_queue = true; // If space in pool available skip the queue
 
 
     SEM_OPERATE.sem_op = SEM_WAIT;
     semop(OLIMPIC_POOL_SEMID, &SEM_OPERATE, 1);
-    POOL_SIZE = *pool;
+    POOL_SIZE = pool->size;
 
     if(POOL_SIZE < POOL_OLIMPIC_MAX_SIZE){
         waited_in_queue = false;
@@ -501,23 +512,31 @@ void olimpic_join_pool(){
     // Enter olimpic pool
     SEM_OPERATE.sem_op = SEM_WAIT;
     semop(OLIMPIC_POOL_SEMID, &SEM_OPERATE, 1);
-    *pool += 1;
-    POOL_SIZE = *pool;
+    pool->size += 1;
+    POOL_SIZE = pool->size;
     set_client_info(ACTION__ENTERED, LOCATION__OLIMPIC_POOL, REASON__NONE);
     log_pool_data(olimpic_get_data, STATUS_ENTER, WHO__CLIENT);
 
+    enter_pid(OLIMPIC_POOL_SEMID);
+
     SEM_OPERATE.sem_op = SEM_SIGNAL;
     semop(OLIMPIC_POOL_SEMID, &SEM_OPERATE, 1);
+
+
+    // Swim in pool
+    imitate_time(rand_int(CLIENT_MIN_SWIM_TIME, CLIENT_MAX_SWIM_TIME));
 
 
     // Make space for others
     SEM_OPERATE.sem_op = SEM_WAIT;
     semop(OLIMPIC_POOL_SEMID, &SEM_OPERATE, 1);
 
-    *pool -= 1;
-    POOL_SIZE = *pool;
+    pool->size -= 1;
+    POOL_SIZE = pool->size;
     set_client_info(ACTION__LEFT, LOCATION__OLIMPIC_POOL, REASON__END_OF_SWIM_TIME);
     log_pool_data(olimpic_get_data, STATUS_LEAVE, WHO__CLIENT);
+
+    remove_pid(OLIMPIC_POOL_SEMID);
     shmdt(pool);
 
     SEM_OPERATE.sem_op = SEM_SIGNAL;
@@ -646,7 +665,7 @@ void leisure_join_pool(){
     ChildPoolData cpd;
     cpd.get_pool_data = leisure_get_data;
 
-    int* pool =(int*) shmat(LEISURE_POOL_SHMID, NULL, 0);
+    PoolData* pool =(PoolData*) shmat(LEISURE_POOL_SHMID, NULL, 0);
     bool wait_in_queue  = true; // If space in pool available skip the queue
     bool enough_space   = false;
     bool age_belowe_avg = false;
@@ -655,8 +674,8 @@ void leisure_join_pool(){
 
     SEM_OPERATE.sem_op = SEM_WAIT;
     semop(LEISURE_POOL_SEMID, &SEM_OPERATE, 1);
-    POOL_SIZE = pool[LEISURE_POOL_SIZE];
-    POOL_AGE_SUM = pool[LEISURE_POOL_AGE_SUM];
+    POOL_SIZE = pool->size;
+    POOL_AGE_SUM = pool->age_sum;
 
     switch(client_has_child()){
         case true:
@@ -715,8 +734,8 @@ void leisure_join_pool(){
 
             SEM_OPERATE.sem_op = SEM_WAIT;
             semop(LEISURE_POOL_SEMID, &SEM_OPERATE, 1);
-            POOL_SIZE = pool[LEISURE_POOL_SIZE];
-            POOL_AGE_SUM = pool[LEISURE_POOL_AGE_SUM];
+            POOL_SIZE = pool->size;
+            POOL_AGE_SUM = pool->age_sum;
 
             switch(client_has_child()){
                 case true:
@@ -763,18 +782,20 @@ void leisure_join_pool(){
     }
 
     // Enter leisure pool
-    // Here semaphore is still open from beggining or queue
-    pool[LEISURE_POOL_SIZE] += 1;
-    pool[LEISURE_POOL_AGE_SUM] += client.age;
-    POOL_SIZE = pool[LEISURE_POOL_SIZE];
-    POOL_AGE_SUM = pool[LEISURE_POOL_AGE_SUM];
+    // Here semaphore is still open from beggining or from queue
+    pool->size += 1;
+    pool->age_sum += client.age;
+    POOL_SIZE = pool->size;
+    POOL_AGE_SUM = pool->age_sum;
+
+    enter_pid(LEISURE_POOL_SHMID);
 
     set_client_info(ACTION__ENTERED, LOCATION__LEISURE_POOL, REASON__NONE);
     if(client_has_child()){
-        pool[LEISURE_POOL_AGE_SUM] += child.age;
-        POOL_AGE_SUM = pool[LEISURE_POOL_AGE_SUM];
+        pool->age_sum += child.age;
+        POOL_AGE_SUM = pool->age_sum;
         cpd.status = STATUS_ENTER;
-        child.tid = new_thread(child_leisure_pool, &cpd);
+        child.tid = new_thread(child_enter_pool, &cpd);
         pthread_join(child.tid, NULL);
     }
     log_pool_data(leisure_get_data, STATUS_ENTER, WHO__CLIENT);
@@ -784,28 +805,32 @@ void leisure_join_pool(){
     semop(LEISURE_POOL_SEMID, &SEM_OPERATE, 1);
 
 
+    // Swim in pool
+    imitate_time(rand_int(CLIENT_MIN_SWIM_TIME, CLIENT_MAX_SWIM_TIME));
+
+
     // Make space for others
     SEM_OPERATE.sem_op = SEM_WAIT;
     semop(LEISURE_POOL_SEMID, &SEM_OPERATE, 1);
 
-    pool[LEISURE_POOL_SIZE] -= 1;
-    pool[LEISURE_POOL_AGE_SUM] -= client.age;
-    POOL_SIZE = pool[LEISURE_POOL_SIZE];
-    POOL_AGE_SUM = pool[LEISURE_POOL_AGE_SUM];
+    pool->size -= 1;
+    pool->age_sum -= client.age;
+    POOL_SIZE = pool->size;
+    POOL_AGE_SUM = pool->age_sum;
 
     set_client_info(ACTION__LEFT, LOCATION__LEISURE_POOL, REASON__END_OF_SWIM_TIME);
 
     if(client_has_child()){
-        pool[LEISURE_POOL_AGE_SUM] -= child.age;
-        POOL_AGE_SUM = pool[LEISURE_POOL_AGE_SUM];
+        pool->age_sum -= child.age;
+        POOL_AGE_SUM = pool->age_sum;
         cpd.status = STATUS_LEAVE;
-        child.tid = new_thread(child_leisure_pool, &cpd);
+        child.tid = new_thread(child_enter_pool, &cpd);
         pthread_join(child.tid, NULL);
     }
 
     log_pool_data(leisure_get_data, STATUS_LEAVE, WHO__CLIENT);
 
-
+    remove_pid(LEISURE_POOL_SHMID);
     shmdt(pool);
 
     SEM_OPERATE.sem_op = SEM_SIGNAL;
@@ -889,13 +914,13 @@ void paddling_join_pool(){
     ChildPoolData cpd;
     cpd.get_pool_data = paddling_get_data;
 
-    int* pool =(int*) shmat(PADDLING_POOL_SHMID, NULL, 0);
+    PoolData* pool =(PoolData*) shmat(PADDLING_POOL_SHMID, NULL, 0);
     bool waited_in_queue = true; // If space in pool available skip the queue
 
 
     SEM_OPERATE.sem_op = SEM_WAIT;
     semop(PADDLING_POOL_SEMID, &SEM_OPERATE, 1);
-    POOL_SIZE = *pool;
+    POOL_SIZE = pool->size;
 
     if(POOL_PADDLING_MAX_SIZE - POOL_SIZE >= 2){
         waited_in_queue = false;
@@ -929,32 +954,39 @@ void paddling_join_pool(){
     SEM_OPERATE.sem_op = SEM_WAIT;
     semop(PADDLING_POOL_SEMID, &SEM_OPERATE, 1);
 
-    *pool += 1;
-    POOL_SIZE = *pool;
+    pool->size += 1;
+    POOL_SIZE = pool->size;
     set_client_info(ACTION__ENTERED, LOCATION__PADDLING_POOL, REASON__NONE);
     log_pool_data(paddling_get_data, STATUS_ENTER, WHO__CLIENT);
 
     cpd.status = STATUS_ENTER;
-    child.tid = new_thread(child_paddling_pool, &cpd);
+    child.tid = new_thread(child_enter_pool, &cpd);
     pthread_join(child.tid, NULL);
+
+    enter_pid(PADDLING_POOL_SHMID);
 
     SEM_OPERATE.sem_op = SEM_SIGNAL;
     semop(PADDLING_POOL_SEMID, &SEM_OPERATE, 1);
+
+
+    // Swim in pool
+    imitate_time(rand_int(CLIENT_MIN_SWIM_TIME, CLIENT_MAX_SWIM_TIME));
 
 
     // Make space for others
     SEM_OPERATE.sem_op = SEM_WAIT;
     semop(PADDLING_POOL_SEMID, &SEM_OPERATE, 1);
 
-    *pool -= 1;
-    POOL_SIZE = *pool;
+    pool->size -= 1;
+    POOL_SIZE = pool->size;
     set_client_info(ACTION__LEFT, LOCATION__PADDLING_POOL, REASON__END_OF_SWIM_TIME);
     log_pool_data(paddling_get_data, STATUS_LEAVE, WHO__CLIENT);
 
     cpd.status = STATUS_LEAVE;
-    child.tid = new_thread(child_paddling_pool, &cpd);
+    child.tid = new_thread(child_enter_pool, &cpd);
     pthread_join(child.tid, NULL);
 
+    remove_pid(LEISURE_POOL_SHMID);
     shmdt(pool);
 
     SEM_OPERATE.sem_op = SEM_SIGNAL;
