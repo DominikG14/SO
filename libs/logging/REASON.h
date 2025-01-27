@@ -15,6 +15,7 @@ enum REASON_ABBR {
     REASON__AGE_ABOVE_AVG,
     REASON__AGE_BELOW_AVG,
 
+    REASON__VIP,
     REASON__CASH_CLOSED,
     REASON__PAYMENT_FINISHED,
 };
@@ -30,6 +31,7 @@ const char* REASON_NAME[] = {
     "AGE_ABOVE_AVG",
     "AGE_BELOW_AVG",
 
+    "VIP",
     "CASH_CLOSED",
     "PAYMENT_FINISHED",
 };
@@ -45,6 +47,7 @@ void (*REASON_CLR[])() = {
     magenta,
     magenta,
 
+    magenta,
     red,
-    yellow,
+    yellow
 };

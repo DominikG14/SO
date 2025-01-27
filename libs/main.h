@@ -200,8 +200,7 @@ void clean_up(){
 
 void __shutdown_handler(int sig){
     clean_up();
-    printf_clr(red, "SHUTDOWN!");
-    exit(EXIT_FAILURE);
+    exit(EXIT_SUCCESS);
 }
 
 

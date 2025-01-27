@@ -22,6 +22,7 @@ void paddling_join_pool();
 struct Client {
     int age;
     bool swim_cap_on;
+    bool vip;
 } typedef Client;
 
 
@@ -51,21 +52,25 @@ Child child;
 
 // -------------------- Random generation --------------------
 bool rand_child(int client_age, int child_age){
-    int child_perc = rand_int(1, 100);
-    if(client_age - child_age >= 18 && child_perc <= CLIENT_HAS_CHILD_PERC){
+    if(client_age - child_age >= 18 && rand_int(1, 100) <= CLIENT_HAS_CHILD_PERC){
         return true;
     }
-
     return false;
 }
 
 
 bool rand_swim_cap(){
-    int swim_cap_perc = rand_int(1, 100);
-    if(swim_cap_perc <= CLIENT_SWIM_CAP_PREC){
+    if(rand_int(1, 100) <= CLIENT_SWIM_CAP_PREC){
         return true;
     }
+    return false;
+}
 
+
+bool rand_vip(){
+    if(rand_int(1, 100) <= CLIENT_VIP_PERC){
+        return true;
+    }
     return false;
 }
 
@@ -73,6 +78,9 @@ bool rand_swim_cap(){
 int rand_swim_time(){
     return rand_int(CLIENT_MIN_SWIM_TIME, CLIENT_MAX_SWIM_TIME);
 }
+
+
+
 
 
 // -------------------- Bool checks --------------------
@@ -233,6 +241,7 @@ void client_set_data(){
     // Set client data
     client.age = rand_int(CLIENT_MIN_AGE, CLIENT_MAX_AGE);
     client.swim_cap_on = rand_swim_cap();
+    client.vip = rand_vip();
     int child_age = rand_int(CHILD_MIN_AGE, CHILD_MAX_AGE);
 
     if(rand_child(client.age, child_age)){
@@ -943,5 +952,4 @@ void setup(){
     set_config_vars();
     __set_close_complex_handler();
     __access_cash_msq();
-    client_set_data();
 }
