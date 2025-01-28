@@ -36,6 +36,7 @@ void __access_cash_msq(){
 
 
 void setup(){
+    SEM_OPERATE.sem_flg=0;
     __set_close_complex_handler();
     set_config_vars();
     __access_cash_msq();

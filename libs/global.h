@@ -92,6 +92,7 @@ enum MSQ_CASH_STATE {
     MSQ_CASH_EMPTY = 1,
     MSQ_CASH_PAY,
     MSQ_CASH_BILL,
+    MSQ_COMPLEX_OPEN,
 };
 
 

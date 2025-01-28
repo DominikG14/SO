@@ -1,5 +1,5 @@
 CC = gcc
-CFLAGS = -I libs
+CFLAGS = -I libs -pthread
 
 SRCDIR = src
 BUILDDIR = build

@@ -96,13 +96,12 @@ void open_pools(){
             exit(EXIT_FAILURE);
         }
     }
-    semctl(OLIMPIC_POOL_SEMID, SEM_POOL_SHM, SETVAL, SEM_SIGNAL);
+    semctl(OLIMPIC_POOL_SEMID, SEM_POOL_SHM, SETVAL, 2);
 
 
     // Leisure pool
             // Clients come with childs or alone
-    SEM_OPERATE.sem_op = SEM_SIGNAL;
-    semop(LEISURE_POOL_SEMID, &SEM_OPERATE, 1);
+    semctl(LEISURE_POOL_SEMID, SEM_POOL_SHM, SETVAL, 2);
 
 
     // Paddling pool
@@ -113,7 +112,7 @@ void open_pools(){
             exit(EXIT_FAILURE);
         }
     }
-    semctl(PADDLING_POOL_SEMID, SEM_POOL_SHM, SETVAL, SEM_SIGNAL);
+    semctl(PADDLING_POOL_SEMID, SEM_POOL_SHM, SETVAL, 2);
 }
 
 
@@ -182,9 +181,20 @@ void open_complex(){
     log_console(WHO__POOL_COMPLEX, ACTION__OPENED, LOCATION__POOL_COMPLEX, REASON__NONE);
     COMPLEX_IS_OPEN = true;
 
-    open_pools();
     open_cash();
     set_lifeguards();
+
+    // Wait for cashier and lifeguards
+    int opened = 0;
+    while(opened != 4){
+        if(msgrcv(CASH_MSQID, &MSQ_BUFFER, sizeof(MSQ_BUFFER.mvalue), MSQ_COMPLEX_OPEN, 0) == FAILURE && errno != EINTR){
+            perror("main - msgrcv - open_pool");
+            exit(EXIT_FAILURE);
+        }
+        opened++;
+    }
+
+    open_pools();
 }
 
 
@@ -228,25 +238,16 @@ void clean_up(){
     msgctl(CASH_MSQID, IPC_RMID, NULL);
 
     // Olimpic pool
-    pool =(PoolData*) shmat(OLIMPIC_POOL_SHMID, NULL, 0);
-    shmdt(pool);
-
     msgctl(OLIMPIC_POOL_MSQID, IPC_RMID, NULL);
     semctl(OLIMPIC_POOL_SEMID, 0, IPC_RMID, NULL);
     shmctl(OLIMPIC_POOL_SHMID, IPC_RMID, NULL);
 
     // Leisure pool
-    pool =(PoolData*) shmat(LEISURE_POOL_SHMID, NULL, 0);
-    shmdt(pool);
-
     msgctl(LEISURE_POOL_MSQID, IPC_RMID, NULL);
     semctl(LEISURE_POOL_SEMID, 0, IPC_RMID, NULL);
     shmctl(LEISURE_POOL_SHMID, IPC_RMID, NULL);
 
     // Paddling pool
-    pool =(PoolData*) shmat(PADDLING_POOL_SHMID, NULL, 0);
-    shmdt(pool);
-
     msgctl(PADDLING_POOL_MSQID, IPC_RMID, NULL);
     semctl(PADDLING_POOL_SEMID, 0, IPC_RMID, NULL);
     shmctl(PADDLING_POOL_SHMID, IPC_RMID, NULL);
