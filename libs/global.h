@@ -39,7 +39,6 @@ MsqBuffer MSQ_BUFFER; // Local buffer for each process
 
 // Pool Shared Mem
 struct PoolData {
-    bool open;
     int size;
     int age_sum; // Only for Leisure pool
     int pid_clients[MAX_CLIENTS_PER_DAY];
