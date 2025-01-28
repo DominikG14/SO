@@ -7,13 +7,10 @@ int main(int argc, char* argv[]){
 
     log_console(WHO__LIFEGUARD, ACTION__ENTERED, GUARDED_POOL, REASON__NONE);
 
-    while(GUARD){
-        if(rand_int(1, 100) <= LIFEGUARD_CLOSE_POOL_PERC && !CLOSED_POOL_ONCE){
+    while(true){
+        if(rand_int(1, 100) <= LIFEGUARD_CLOSE_POOL_PERC){
             close_pool();
         }
         imitate_time(1);
     }
-
-    log_console(WHO__LIFEGUARD, ACTION__LEFT, GUARDED_POOL, REASON__COMPLEX_CLOSED);
-    exit(EXIT_SUCCESS);
 }

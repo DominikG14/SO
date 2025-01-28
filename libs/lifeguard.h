@@ -5,7 +5,6 @@
 
 
 // -------------------- Local --------------------
-bool GUARD = true;
 bool CLOSED_POOL_ONCE = false;
 int GUARDED_POOL;
 int POOL_MAX_SIZE;
@@ -66,8 +65,6 @@ void close_pool(){
     SEM_OPERATE.sem_num = SEM_POOL_SHM;
     SEM_OPERATE.sem_op = SEM_SIGNAL;
     semop(POOL_SEMID, &SEM_OPERATE, 1);
-
-    CLOSED_POOL_ONCE = true;
 }
 
 void open_pool(){
@@ -77,7 +74,8 @@ void open_pool(){
 
 // -------------------- IPCS --------------------
 void __close_complex_handler(){
-    GUARD = false;
+    log_console(WHO__LIFEGUARD, ACTION__LEFT, GUARDED_POOL, REASON__COMPLEX_CLOSED);
+    exit(EXIT_SUCCESS);
 }
 
 
