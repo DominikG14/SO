@@ -307,7 +307,6 @@ void __create_pools(){
         exit(EXIT_FAILURE);
     }
     pool =(PoolData*) shmat(OLIMPIC_POOL_SHMID, NULL, 0);
-    pool->open = true;
     pool->size = 0;
     pool->age_sum = 0;
     for(int i = 0; i < MAX_CLIENTS_PER_DAY; i++){
@@ -337,7 +336,6 @@ void __create_pools(){
         exit(EXIT_FAILURE);
     }
     pool =(PoolData*) shmat(LEISURE_POOL_SHMID, NULL, 0);
-    pool->open = true;
     pool->size = 0;
     pool->age_sum = 0;
     for(int i = 0; i < MAX_CLIENTS_PER_DAY; i++){
@@ -366,7 +364,6 @@ void __create_pools(){
         exit(EXIT_FAILURE);
     }
     pool =(PoolData*) shmat(PADDLING_POOL_SHMID, NULL, 0);
-    pool->open = true;
     pool->size = 0;
     pool->age_sum = 0;
     for(int i = 0; i < MAX_CLIENTS_PER_DAY; i++){
