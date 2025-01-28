@@ -12,6 +12,10 @@
 bool CASH_OPEN = true;
 
 
+// -------------------- Functionality --------------------
+
+
+
 // -------------------- IPCS --------------------
 void __close_complex_handler(){
     CASH_OPEN = false;

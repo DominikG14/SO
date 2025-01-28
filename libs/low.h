@@ -2,6 +2,8 @@
 
 #include "global.h"
 
+#define FILE_SIZE 4096
+
 
 enum GLOBAL_STATE {
     SUCCESS = 0,
@@ -9,19 +11,62 @@ enum GLOBAL_STATE {
 };
 
 
-// Processes
-const char* PS_CLIENT_PATH = "build/client";
-const char* PS_CLIENT_NAME  = "./build/client";
+// -------------------- Messages Queue --------------------
+struct MsqBuffer {
+	long mtype;
+	int  mvalue;
+} typedef MsqBuffer;
 
-const char* PS_CASHIER_PATH = "build/cashier"; 
-const char* PS_CASHIER_NAME  = "./build/cashier";
 
-const char* PS_LIFEGUARD_PATH = "build/lifeguard"; 
-const char* PS_LIFEGUARD_NAME  = "./build/lifeguard";
+int access_msq(key_t key, int flags){
+    int msqid = msgget(key, flags);
+    if(msqid == FAILURE){
+        perror(__func__);
+        exit(EXIT_FAILURE);
+    }
 
-// Keys
+    return msqid;
+}
+
+
+void send_msq(int msqid, long type){
+    MsqBuffer msg;
+    msg.mtype = type;
+
+    int status = msgsnd(msqid, &msg, sizeof(msg.mvalue), 0);
+    if(status == FAILURE){
+        perror(__func__);
+        exit(EXIT_FAILURE);
+    }
+}
+
+
+void get_msq(int msqid, long type){
+    MsqBuffer msg;
+
+    int status = msgrcv(msqid, &msg, sizeof(msg.mvalue), type, 0);
+    if(status == FAILURE && errno != EINTR){
+        perror(__func__);
+        exit(EXIT_FAILURE);
+    }
+}
+
+
+int get_msq_count(int msqid){
+    struct msqid_ds buf;
+
+    int status = msgctl(msqid, IPC_STAT, &buf);
+    if(status == FAILURE) {
+        perror(__func__);
+        exit(EXIT_FAILURE);
+    }
+
+    return buf.msg_qnum;
+}
+
+
+// -------------------- Keys --------------------
 const char* KEY_PATH = ".";
-
 
 key_t get_key(int id){
     key_t key = ftok(KEY_PATH, id);
@@ -34,7 +79,7 @@ key_t get_key(int id){
 }
 
 
-// Threads
+// -------------------- Threads --------------------
 pthread_t new_thread(void* (*thread_func)(void*), void* thread_args){
     pthread_t tid;
 
@@ -48,10 +93,7 @@ pthread_t new_thread(void* (*thread_func)(void*), void* thread_args){
 }
 
 
-// Files
-const int FILE_SIZE = 4096;
-
-
+// -------------------- Files --------------------
 char* alloc(){
     char* result =(char*) malloc(FILE_SIZE * sizeof(char));
     if(result == NULL){

@@ -7,32 +7,18 @@ int main(){
 
 
     while(CASH_OPEN){
-
         // Get client
-        MSQ_BUFFER.mtype=MSQ_CASH_EMPTY;
-        if(msgsnd(CASH_MSQID, &MSQ_BUFFER, sizeof(MSQ_BUFFER.mvalue), 0) == FAILURE){
-            perror("kasjer - msgsnd - klienta");
-            exit(EXIT_FAILURE);
-        }
-
+        send_msq(CASH_MSQID, MSQ_CASH_EMPTY);
 
         // Get Payment
-        if(msgrcv(CASH_MSQID, &MSQ_BUFFER, sizeof(MSQ_BUFFER.mvalue), MSQ_CASH_PAY, 0) == FAILURE){
-            perror("kasjer - msgrcv - zaplata");
-            exit(EXIT_FAILURE);
-        }
+        get_msq(CASH_MSQID, MSQ_CASH_PAY);
         log_console(WHO__CASHIER, ACTION__RECIVED_PAY, LOCATION__CASH_QUEUE, REASON__NONE);
 
-
+        // Realize payment
         imitate_time(rand_int(CASHIER_MIN_PAYMENT_TIME, CASHIER_MAX_PAYMENT_TIME));
         
-
         // Give bill
-        MSQ_BUFFER.mtype=MSQ_CASH_BILL;
-        if(msgsnd(CASH_MSQID, &MSQ_BUFFER, sizeof(MSQ_BUFFER.mvalue), 0) == FAILURE){
-            perror("kasjer - msgsnd - paragon");
-            exit(EXIT_FAILURE);
-        }
+        send_msq(CASH_MSQID, MSQ_CASH_BILL);
     }
 
 

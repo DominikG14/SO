@@ -10,6 +10,15 @@
 char* CONFIG_FILEPATH = "./config/config";
 char* LOGGING_FILEPATH = "./logs";
 
+const char* PS_CLIENT_PATH = "build/client";
+const char* PS_CLIENT_NAME  = "./build/client";
+
+const char* PS_CASHIER_PATH = "build/cashier"; 
+const char* PS_CASHIER_NAME  = "./build/cashier";
+
+const char* PS_LIFEGUARD_PATH = "build/lifeguard"; 
+const char* PS_LIFEGUARD_NAME  = "./build/lifeguard";
+
 
 // -------------------- Local config vars --------------------
 // Time
@@ -82,7 +91,6 @@ enum CONFIG_VARS {
     CLIENT__MAX_SWIM_TIME,
     CLIENT__MIN_AGE,
     CLIENT__MAX_AGE,
-
 
     // Child
     CHILD__MIN_AGE,
@@ -309,7 +317,7 @@ void __check_ge(int greater, int lesser, char* name_greater, char* name_lesser){
 }
 
 
-// Check
+// -------------------- Check --------------------
 void check_config(){ // This is runed only once in 'main'
     __check_positive(TIME_PER_SEC, "TIME__PER_SEC");
     __check_HHMM(TIME_START, "TIME__START");

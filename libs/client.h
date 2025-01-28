@@ -42,6 +42,13 @@ struct ChildPoolData {
 } typedef ChildPoolData;
 
 
+enum CLIENT_POOL_ACTION {
+    STATUS_ENTER,
+    STATUS_LEAVE,
+    STATUS_NONE,
+};
+
+
 // -------------------- Pool data --------------------
 void enter_pid(){
     // CALL THIS ONLY WHEN PROCESS ACCESSES SEM TO SHARED MEM!
@@ -274,26 +281,17 @@ void client_enter_cash_queue(){
         child.tid = new_thread(child_keep_eye_on, NULL);
         pthread_join(child.tid, NULL);
     }
-    if(msgrcv(CASH_MSQID, &MSQ_BUFFER, sizeof(MSQ_BUFFER.mvalue), MSQ_CASH_EMPTY, 0) == FAILURE && errno != EINTR){
-        perror("klient - msgrcv");
-        exit(EXIT_FAILURE);
-    }
+    get_msq(CASH_MSQID, MSQ_CASH_EMPTY);
 
 
     // Pay
     set_client_info(ACTION__PAID, LOCATION__CASH_QUEUE, REASON__NONE), log_client(WHO__CLIENT);
-    MSQ_BUFFER.mtype=MSQ_CASH_PAY;
-    if(msgsnd(CASH_MSQID, &MSQ_BUFFER, sizeof(MSQ_BUFFER.mvalue), 0) == FAILURE){
-        perror("klient - msgsnd");
-        exit(EXIT_FAILURE);
-    }
+    send_msq(CASH_MSQID, MSQ_CASH_PAY);
 
 
     // Wait for bill
-    if(msgrcv(CASH_MSQID, &MSQ_BUFFER, sizeof(MSQ_BUFFER.mvalue), MSQ_CASH_BILL, 0) == FAILURE && errno != EINTR){
-        perror("klient - msgrcv");
-        exit(EXIT_FAILURE);
-    }
+    get_msq(CASH_MSQID, MSQ_CASH_BILL);
+
     set_client_info(ACTION__RECIVED_BILL, LOCATION__CASH_QUEUE, REASON__NONE), log_client(WHO__CLIENT);
     set_client_info(ACTION__LEFT, LOCATION__CASH_QUEUE, REASON__PAYMENT_FINISHED), log_client(WHO__CLIENT);
     if(client_has_child()){
@@ -498,10 +496,7 @@ void olimpic_join_pool(){
 
 
     // Enter olimpic pool queue
-    if(msgrcv(POOL_MSQID, &MSQ_BUFFER, sizeof(MSQ_BUFFER.mvalue), MSQ_POOL_SPACE, 0) == FAILURE && errno != EINTR){
-        perror("client - msgrcv - olimpic");
-        exit(EXIT_FAILURE);
-    }
+    get_msq(POOL_MSQID, MSQ_POOL_SPACE);
     if(waited_in_queue) set_client_info(ACTION__LEFT, LOCATION__OLIMPIC_QUEUE, REASON__SPACE_AVAILABLE), log_client(WHO__CLIENT);
 
 
@@ -538,11 +533,7 @@ void olimpic_join_pool(){
     SEM_OPERATE.sem_op = SEM_SIGNAL;
     semop(POOL_SEMID, &SEM_OPERATE, 1);
     
-    MSQ_BUFFER.mtype=MSQ_POOL_SPACE;
-    if(msgsnd(POOL_MSQID, &MSQ_BUFFER, sizeof(MSQ_BUFFER.mvalue), 0) == FAILURE){
-        perror("client - msgsnd - olimpic");
-        exit(EXIT_FAILURE);
-    }
+    send_msq(POOL_MSQID, MSQ_POOL_SPACE);
 
     exit(EXIT_SUCCESS);
 }
@@ -935,10 +926,7 @@ void paddling_join_pool(){
 
 
     // Enter paddling queue
-    if(msgrcv(POOL_MSQID, &MSQ_BUFFER, sizeof(MSQ_BUFFER.mvalue), MSQ_POOL_SPACE, 0) == FAILURE && errno != EINTR){
-        perror("client - msgrcv - paddling");
-        exit(EXIT_FAILURE);
-    }
+    get_msq(POOL_MSQID, MSQ_POOL_SPACE);
     if(waited_in_queue){
         set_client_info(ACTION__LEFT, LOCATION__PADDLING_QUEUE, REASON__SPACE_AVAILABLE), log_client(WHO__CLIENT);
         child.tid = new_thread(child_keep_eye_on, NULL);
@@ -988,11 +976,7 @@ void paddling_join_pool(){
     SEM_OPERATE.sem_op = SEM_SIGNAL;
     semop(POOL_SEMID, &SEM_OPERATE, 1);
     
-    MSQ_BUFFER.mtype=MSQ_POOL_SPACE;
-    if(msgsnd(POOL_MSQID, &MSQ_BUFFER, sizeof(MSQ_BUFFER.mvalue), 0) == FAILURE){
-        perror("client - msgsnd - olimpic");
-        exit(EXIT_FAILURE);
-    }
+    send_msq(POOL_MSQID, MSQ_POOL_SPACE);
 
     exit(EXIT_SUCCESS);
 }
@@ -1068,18 +1052,8 @@ void __close_pool_handler(){
     remove_pid();
     shmdt(pool);
 
-    MSQ_BUFFER.mtype=MSQ_LIFEGUARD;
-    if(msgsnd(POOL_MSQID, &MSQ_BUFFER, sizeof(MSQ_BUFFER.mvalue), 0) == FAILURE){
-        perror("client - msgsnd - olimpic");
-        exit(EXIT_FAILURE);
-    }
-
-    if(client_has_child()){
-        if(msgsnd(POOL_MSQID, &MSQ_BUFFER, sizeof(MSQ_BUFFER.mvalue), 0) == FAILURE){
-            perror("client - msgsnd - olimpic");
-            exit(EXIT_FAILURE);
-        }
-    }
+    send_msq(POOL_MSQID, MSQ_LIFEGUARD);
+    if(client_has_child()) send_msq(POOL_MSQID, MSQ_LIFEGUARD);
 
     SEM_OPERATE.sem_op = SEM_SIGNAL;
     semop(POOL_SEMID, &SEM_OPERATE, 1);

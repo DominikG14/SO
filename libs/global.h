@@ -19,49 +19,8 @@
 
 #define MAX_CLIENTS_PER_DAY 1440 // num of minutes in one day
 
-// Local for each process (they may use it or not)
-int CASH_MSQID;
-int POOL_MSQID;
-int POOL_SEMID;
-int POOL_SHMID;
 
-int POOL_SIZE; // Current pool size for logging
-int POOL_AGE_SUM; // For leisure pool age avg 
-
-
-// Message Queue
-struct MsqBuffer {
-	long mtype;
-	int  mvalue;
-} typedef MsqBuffer;
-MsqBuffer MSQ_BUFFER; // Local buffer for each process
-
-
-// Pool Shared Mem
-struct PoolData {
-    bool open;
-    int size;
-    int age_sum; // Only for Leisure pool
-    int pid_clients[MAX_CLIENTS_PER_DAY];
-} typedef PoolData;
-
-
-// Semaphore 
-struct sembuf SEM_OPERATE;
-
-enum SEM__OPERATIONS {
-    SEM_WAIT = -1,
-    SEM_SIGNAL = 1,
-};
-
-
-enum CLIENT_POOL_ACTION {
-    STATUS_ENTER,
-    STATUS_LEAVE,
-    STATUS_NONE,
-};
-
-
+// -------------------- Keys --------------------
 enum GLOBAL_KEYS {
     KEY_CASH_MSQ,
 
@@ -81,13 +40,37 @@ enum GLOBAL_KEYS {
     KEY_PADDLING_POOL_SHM,
 };
 
-enum SEM_POOL {
-    SEM_POOL_SHM,
-    SEM_POOL_LIFEGUARD,
-    SEM_POOL_NUM
+
+// -------------------- Local --------------------
+// for each process (they may use it or not)
+int CASH_MSQID;
+int POOL_MSQID;
+int POOL_SEMID;
+int POOL_SHMID;
+
+int POOL_SIZE; // Current pool size for logging
+int POOL_AGE_SUM; // For leisure pool age avg 
+
+
+struct sembuf SEM_OPERATE;
+
+
+// -------------------- Pool Data --------------------
+struct PoolData {
+    int size;
+    int age_sum; // Only for Leisure pool
+    int pid_clients[MAX_CLIENTS_PER_DAY];
+} typedef PoolData;
+
+
+enum POOL_NAME {
+    OLIMPIC,
+    LEISURE,
+    PADDLING,
 };
 
 
+// -------------------- Message queue operations --------------------
 enum MSQ_CASH_STATE {
     MSQ_CASH_EMPTY = 1,
     MSQ_CASH_PAY,
@@ -101,14 +84,22 @@ enum MSQ_POOL_STATE {
 };
 
 
-enum SINGALS {
-    SIG_CLOSE_COMPLEX = SIGUSR1,
-    SIG_LIFEGUARD = SIGUSR2,
+// -------------------- Sem operations --------------------
+enum SEM__OPERATIONS {
+    SEM_WAIT = -1,
+    SEM_SIGNAL = 1,
 };
 
 
-enum POOL_NAME {
-    OLIMPIC,
-    LEISURE,
-    PADDLING,
+enum SEM_POOL {
+    SEM_POOL_SHM,
+    SEM_POOL_LIFEGUARD,
+    SEM_POOL_NUM
+};
+
+
+// -------------------- Signals --------------------
+enum SINGALS {
+    SIG_CLOSE_COMPLEX = SIGUSR1,
+    SIG_LIFEGUARD = SIGUSR2,
 };

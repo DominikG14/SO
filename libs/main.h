@@ -85,33 +85,21 @@ void disp_curr_time(){
 
 // -------------------- Pool Complex Open --------------------
 void open_pools(){
-    MSQ_BUFFER.mtype=MSQ_POOL_SPACE;
-
-
-    // Olimpic pool
-            // Each client comes alone
+    // Olimpic pool - Each client comes alone
     for(int i = 0; i < POOL_OLIMPIC_MAX_SIZE; i++){
-        if(msgsnd(OLIMPIC_POOL_MSQID, &MSQ_BUFFER, sizeof(MSQ_BUFFER.mvalue), 0) == FAILURE){
-            perror("main - msgsnd - open_pool");
-            exit(EXIT_FAILURE);
-        }
+        send_msq(OLIMPIC_POOL_MSQID, MSQ_POOL_SPACE);
     }
     semctl(OLIMPIC_POOL_SEMID, SEM_POOL_SHM, SETVAL, SEM_SIGNAL);
 
 
-    // Leisure pool
-            // Clients come with childs or alone
+    // Leisure pool - Clients come with childs or alone
     SEM_OPERATE.sem_op = SEM_SIGNAL;
     semop(LEISURE_POOL_SEMID, &SEM_OPERATE, 1);
 
 
-    // Paddling pool
-            // Each client comes with a child
+    // Paddling pool - Each client comes with a child
     for(int i = 0; i < POOL_PADDLING_MAX_SIZE / 2; i++){
-        if(msgsnd(PADDLING_POOL_MSQID, &MSQ_BUFFER, sizeof(MSQ_BUFFER.mvalue), 0) == FAILURE){
-            perror("main - msgsnd - open_pool");
-            exit(EXIT_FAILURE);
-        }
+        send_msq(PADDLING_POOL_MSQID, MSQ_POOL_SPACE);
     }
     semctl(PADDLING_POOL_SEMID, SEM_POOL_SHM, SETVAL, SEM_SIGNAL);
 }
@@ -120,12 +108,12 @@ void open_pools(){
 void open_cash(){
     switch(PID_CASHIER = fork()){
         case FAILURE:
-            perror("main - fork");
+            perror(__func__);
             exit(EXIT_FAILURE);
 
         case SUCCESS:
             execl(PS_CASHIER_PATH, PS_CASHIER_NAME, NULL);
-            perror("main - execl");
+            perror(__func__);
             exit(EXIT_FAILURE);
     }
 }
@@ -135,7 +123,7 @@ void set_lifeguards(){
     for(int pool_num = 0; pool_num < 3; pool_num++){
         switch(PID_LIFEGUARDS[pool_num] = fork()){
             case FAILURE:
-                perror("main - fork");
+                perror(__func__);
                 exit(EXIT_FAILURE);
             
             case SUCCESS:
@@ -143,7 +131,7 @@ void set_lifeguards(){
                 sprintf(str_pool_num, "%d", pool_num);
 
                 execl(PS_LIFEGUARD_PATH, PS_LIFEGUARD_NAME, str_pool_num, NULL);
-                perror("main - execl");
+                perror(__func__);
                 exit(EXIT_FAILURE);
         }
     }
@@ -275,7 +263,7 @@ void __reset_logs(){
 void __create_cash_msq(){
     key_t key = get_key(KEY_CASH_MSQ);
     if((CASH_MSQID = msgget(key, IPC_CREAT|0600)) == FAILURE){
-        perror("main - msgget - kasa");
+        perror(__func__);
         exit(EXIT_FAILURE);
     }
 }
@@ -291,21 +279,20 @@ void __create_pools(){
     key_shm = get_key(KEY_OLIMPIC_POOL_SHM);
 
     if((OLIMPIC_POOL_MSQID = msgget(key_msq, IPC_CREAT|0600)) == FAILURE){
-        perror("main - msgget - olimpic");
+        perror(__func__);
         exit(EXIT_FAILURE);
     }
 
     if((OLIMPIC_POOL_SEMID = semget(key_sem, SEM_POOL_NUM, IPC_CREAT|0600)) == FAILURE){
-        perror("main - semget - olimpic");
+        perror(__func__);
         exit(EXIT_FAILURE);
     }
 
     if((OLIMPIC_POOL_SHMID = shmget(key_shm, sizeof(PoolData), IPC_CREAT|0600)) == FAILURE){
-        perror("main - shmget - olimpic");
+        perror(__func__);
         exit(EXIT_FAILURE);
     }
     pool =(PoolData*) shmat(OLIMPIC_POOL_SHMID, NULL, 0);
-    pool->open = true;
     pool->size = 0;
     pool->age_sum = 0;
     for(int i = 0; i < MAX_CLIENTS_PER_DAY; i++){
@@ -320,12 +307,12 @@ void __create_pools(){
     key_shm = get_key(KEY_LEISURE_POOL_SHM);
 
     if((LEISURE_POOL_MSQID = msgget(key_msq, IPC_CREAT|0600)) == FAILURE){
-        perror("main - msgget - leisure");
+        perror(__func__);
         exit(EXIT_FAILURE);
     }
 
     if((LEISURE_POOL_SEMID = semget(key_sem, SEM_POOL_NUM, IPC_CREAT|0600)) == FAILURE){
-        perror("main - semget - leisure");
+        perror(__func__);
         exit(EXIT_FAILURE);
     }
 
@@ -335,7 +322,6 @@ void __create_pools(){
         exit(EXIT_FAILURE);
     }
     pool =(PoolData*) shmat(LEISURE_POOL_SHMID, NULL, 0);
-    pool->open = true;
     pool->size = 0;
     pool->age_sum = 0;
     for(int i = 0; i < MAX_CLIENTS_PER_DAY; i++){
@@ -364,7 +350,6 @@ void __create_pools(){
         exit(EXIT_FAILURE);
     }
     pool =(PoolData*) shmat(PADDLING_POOL_SHMID, NULL, 0);
-    pool->open = true;
     pool->size = 0;
     pool->age_sum = 0;
     for(int i = 0; i < MAX_CLIENTS_PER_DAY; i++){

@@ -37,10 +37,7 @@ void close_pool(){
     // Wait for clients to leave the pool
     int clients_left = 0;
     while(clients_left != POOL_SIZE){
-        if(msgrcv(POOL_MSQID, &MSQ_BUFFER, sizeof(MSQ_BUFFER.mvalue), MSQ_LIFEGUARD, 0) == FAILURE && errno != EINTR){
-            perror("lifeguard - msgrcv");
-            exit(EXIT_FAILURE);
-        }
+        get_msq(POOL_MSQID, MSQ_LIFEGUARD);
         clients_left++;
     }
 
@@ -48,18 +45,9 @@ void close_pool(){
     imitate_time(rand_int(LIFEGUARD_CLOSE_POOL_MIN_TIME, LIFEGUARD_CLOSE_POOL_MAX_TIME));
 
     // Open pool
-    struct msqid_ds buf;
-    if(msgctl(POOL_MSQID, IPC_STAT, &buf) == -1) {
-        perror("lifeguard - msgctl");
-        exit(EXIT_FAILURE);
-    }
-
-    MSQ_BUFFER.mtype=MSQ_POOL_SPACE;
-    for(int i = buf.msg_qnum; i < POOL_MAX_SIZE; i++){
-        if(msgsnd(POOL_MSQID, &MSQ_BUFFER, sizeof(MSQ_BUFFER.mvalue), 0) == FAILURE){
-            perror("main - msgsnd - open_pool");
-            exit(EXIT_FAILURE);
-        }
+    int already_waiting = get_msq_count(POOL_MSQID);
+    for(int i = already_waiting; i < POOL_MAX_SIZE; i++){
+        send_msq(POOL_MSQID, MSQ_POOL_SPACE);
     }
 
     log_console(WHO__LIFEGUARD, ACTION__OPENED, GUARDED_POOL, REASON__NONE);
@@ -68,10 +56,6 @@ void close_pool(){
     semop(POOL_SEMID, &SEM_OPERATE, 1);
 
     CLOSED_POOL_ONCE = true;
-}
-
-void open_pool(){
-
 }
 
 
@@ -125,7 +109,6 @@ void __access_pool(){
         exit(EXIT_FAILURE);
     }
 }
-
 
 
 void __set_close_complex_handler(){
