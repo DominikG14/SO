@@ -67,10 +67,6 @@ void close_pool(){
     semop(POOL_SEMID, &SEM_OPERATE, 1);
 }
 
-void open_pool(){
-
-}
-
 
 // -------------------- IPCS --------------------
 void __close_complex_handler(){
