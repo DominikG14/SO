@@ -43,7 +43,7 @@ bool close_complex_time(){
 
 
 bool rand_client(){
-    int spawn_client_perc = rand_int(0, 100);
+    int spawn_client_perc = rand_int(1, 100);
     if(spawn_client_perc <= CLIENT_SPAWN_PERC){
         return true;
     }
@@ -132,6 +132,8 @@ void open_cash(){
 
 
 void set_lifeguards(){
+    char str_pool_num[2];
+
     for(int pool_num = 0; pool_num < 3; pool_num++){
         switch(PID_LIFEGUARDS[pool_num] = fork()){
             case FAILURE:
@@ -139,7 +141,6 @@ void set_lifeguards(){
                 exit(EXIT_FAILURE);
             
             case SUCCESS:
-                char str_pool_num[2];
                 sprintf(str_pool_num, "%d", pool_num);
 
                 execl(PS_LIFEGUARD_PATH, PS_LIFEGUARD_NAME, str_pool_num, NULL);
