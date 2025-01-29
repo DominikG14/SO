@@ -227,6 +227,8 @@ void close_complex(){
     close_cash();
     remove_all_clients();
     remove_lifeguards();
+
+    COMPLEX_IS_OPEN = false;
 }
 
 
