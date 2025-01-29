@@ -96,7 +96,7 @@ void open_pools(){
             exit(EXIT_FAILURE);
         }
     }
-    semctl(OLIMPIC_POOL_SEMID, SEM_POOL_SHM, SETVAL, 2);
+    semctl(OLIMPIC_POOL_SEMID, SEM_POOL_SHM, SETVAL, 3); // For lifeguard and cashier
 
 
     // Leisure pool
