@@ -150,8 +150,15 @@ void set_lifeguards(){
 }
 
 
+void* __handle_zombies(void* thread_flags){
+    pid_t pid =(intptr_t) thread_flags;
+    waitpid(pid, NULL, 0);
+}
+
+
 void let_clients_in(){
     int pid;
+    pthread_t tid;
 
     if(!COMPLEX_IS_OPEN){
         log_console(WHO__POOL_COMPLEX, ACTION__CLOSED, LOCATION__POOL_COMPLEX, REASON__NONE);
@@ -170,6 +177,8 @@ void let_clients_in(){
             exit(EXIT_FAILURE);
         
         default:
+            pthread_t tid = new_thread(__handle_zombies, (void*)(intptr_t)pid);
+            pthread_detach(tid);
             PID_CLIENTS[CLIENTS_NUM] = pid;
             CLIENTS_NUM++;
         }
