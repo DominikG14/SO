@@ -169,6 +169,7 @@ void let_clients_in(){
     switch(pid = fork()){
         case FAILURE:
             perror("main - fork");
+            clean_up();
             exit(EXIT_FAILURE);
 
         case SUCCESS:
@@ -243,8 +244,6 @@ void close_complex(){
 
 // -------------------- IPCS --------------------
 void clean_up(){
-    PoolData* pool;
-
     // Cash
     msgctl(CASH_MSQID, IPC_RMID, NULL);
 
